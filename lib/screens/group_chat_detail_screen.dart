@@ -162,6 +162,59 @@ class _GroupChatDetailScreenState extends State<GroupChatDetailScreen> {
         .toList();
   }
 
+  Future<void> _ensurePaymentMessagesExist() async {
+    if (_selectedCategory == 'payment') {
+      final paymentMessages = _getFilteredMessages();
+      if (paymentMessages.isEmpty) {
+        // Check if there are existing paid members without payment messages
+        try {
+          final existingPaidMembers = await _chatService
+              .getExistingPaidMembersWithoutMessages(widget.groupId);
+          if (existingPaidMembers.isNotEmpty) {
+            // Show a dialog asking if user wants to generate payment messages
+            if (mounted) {
+              final shouldGenerate = await showDialog<bool>(
+                context: context,
+                builder:
+                    (context) => AlertDialog(
+                      title: const Text('Existing Paid Members'),
+                      content: Text(
+                        'Found ${existingPaidMembers.length} existing payment(s) that don\'t have chat messages. Would you like to generate payment messages for them?',
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(false),
+                          child: const Text('Cancel'),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(true),
+                          child: const Text('Generate'),
+                        ),
+                      ],
+                    ),
+              );
+
+              if (shouldGenerate == true) {
+                await _chatService
+                    .generatePaymentMessagesForExistingPaidMembers(
+                      widget.groupId,
+                    );
+                // Refresh messages after generating
+                _loadInitialMessages();
+              }
+            }
+          }
+        } catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Error checking existing payments: $e')),
+            );
+          }
+        }
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final currentUserId = Supabase.instance.client.auth.currentUser!.id;
@@ -174,10 +227,14 @@ class _GroupChatDetailScreenState extends State<GroupChatDetailScreen> {
         actions: [
           // Category filter
           PopupMenuButton<String>(
-            onSelected: (value) {
+            onSelected: (value) async {
               setState(() {
                 _selectedCategory = value;
               });
+              // Check for existing paid members when payment filter is selected
+              if (value == 'payment') {
+                await _ensurePaymentMessagesExist();
+              }
             },
             itemBuilder:
                 (context) => [
@@ -398,8 +455,24 @@ class _GroupChatDetailScreenState extends State<GroupChatDetailScreen> {
                           Text(
                             _selectedCategory == 'all'
                                 ? 'No messages yet. Say hi!'
+                                : _selectedCategory == 'payment'
+                                ? 'No payment confirmations yet'
                                 : 'No ${_selectedCategory} messages',
                           ),
+                          if (_selectedCategory == 'payment') ...[
+                            const SizedBox(height: 16),
+                            ElevatedButton.icon(
+                              onPressed: () async {
+                                await _ensurePaymentMessagesExist();
+                              },
+                              icon: const Icon(Icons.history),
+                              label: const Text('Check Existing Payments'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: theme.colorScheme.secondary,
+                                foregroundColor: theme.colorScheme.onSecondary,
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                     )
@@ -444,6 +517,7 @@ class _GroupChatDetailScreenState extends State<GroupChatDetailScreen> {
   ) {
     final category = message['category'] ?? 'general';
     final isExpense = category == 'expense';
+    final isPayment = category == 'payment';
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
@@ -473,6 +547,10 @@ class _GroupChatDetailScreenState extends State<GroupChatDetailScreen> {
                           ? theme.colorScheme.tertiaryContainer.withValues(
                             alpha: 0.3,
                           )
+                          : isPayment
+                          ? theme.colorScheme.secondaryContainer.withValues(
+                            alpha: 0.3,
+                          )
                           : isMe
                           ? theme.colorScheme.primary
                           : theme.colorScheme.surfaceContainerHighest,
@@ -486,6 +564,11 @@ class _GroupChatDetailScreenState extends State<GroupChatDetailScreen> {
                       isExpense
                           ? Border.all(
                             color: theme.colorScheme.tertiary,
+                            width: 1.5,
+                          )
+                          : isPayment
+                          ? Border.all(
+                            color: theme.colorScheme.secondary,
                             width: 1.5,
                           )
                           : null,
@@ -549,6 +632,124 @@ class _GroupChatDetailScreenState extends State<GroupChatDetailScreen> {
                       ),
                       const SizedBox(height: 8),
                     ],
+                    if (isPayment) ...[
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.secondary.withValues(
+                            alpha: 0.1,
+                          ),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.payment,
+                              size: 14,
+                              color: theme.colorScheme.secondary,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              message['payment_data']?['is_historical'] == true
+                                  ? 'Historical Payment'
+                                  : 'Payment',
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: theme.colorScheme.secondary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      // Show payment details
+                      if (message['payment_data'] != null) ...[
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.secondary.withValues(
+                              alpha: 0.05,
+                            ),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: theme.colorScheme.secondary.withValues(
+                                alpha: 0.2,
+                              ),
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.person,
+                                    size: 16,
+                                    color: theme.colorScheme.secondary,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'Paid by: ${message['payment_data']['paid_by_name'] ?? 'Unknown'}',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: theme.colorScheme.secondary,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.attach_money,
+                                    size: 16,
+                                    color: theme.colorScheme.secondary,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'Amount: \$${(message['payment_data']['amount_paid'] as num?)?.toStringAsFixed(2) ?? '0.00'}',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: theme.colorScheme.secondary,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.receipt,
+                                    size: 16,
+                                    color: theme.colorScheme.secondary,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Expanded(
+                                    child: Text(
+                                      'For: ${message['payment_data']['expense_title'] ?? 'Unknown Expense'}',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: theme.colorScheme.secondary,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                      ],
+                    ],
                     Text(
                       message['content'],
                       style: TextStyle(
@@ -556,6 +757,8 @@ class _GroupChatDetailScreenState extends State<GroupChatDetailScreen> {
                             isMe
                                 ? theme.colorScheme.onPrimary
                                 : isExpense
+                                ? theme.colorScheme.onSurface
+                                : isPayment
                                 ? theme.colorScheme.onSurface
                                 : theme.colorScheme.onSurfaceVariant,
                         fontSize: 15,

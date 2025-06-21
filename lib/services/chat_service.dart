@@ -168,6 +168,7 @@ class ChatService {
     required String content,
     String category = 'general',
     Map<String, dynamic>? expenseData,
+    Map<String, dynamic>? paymentData,
   }) async {
     try {
       final timestamp = DateTime.now().toIso8601String();
@@ -179,6 +180,7 @@ class ChatService {
         'category': category,
         'created_at': timestamp,
         'expense_data': expenseData,
+        'payment_data': paymentData,
       });
 
       // Small delay to ensure database has processed the insert
@@ -860,6 +862,16 @@ class ChatService {
   // Mark an expense share as paid
   Future<void> markExpenseShareAsPaid(String expenseShareId) async {
     try {
+      // First, get the expense share details to find the group and expense info
+      final expenseShare =
+          await _supabase
+              .from('expense_shares')
+              .select('*, expenses(*)')
+              .eq('id', expenseShareId)
+              .eq('user_id', _supabase.auth.currentUser!.id)
+              .single();
+
+      // Update the expense share as paid
       await _supabase
           .from('expense_shares')
           .update({
@@ -868,6 +880,34 @@ class ChatService {
           })
           .eq('id', expenseShareId)
           .eq('user_id', _supabase.auth.currentUser!.id);
+
+      // Get the current user's profile
+      final currentUserProfile =
+          await _supabase
+              .from('profiles')
+              .select('*')
+              .eq('id', _supabase.auth.currentUser!.id)
+              .single();
+
+      // Create payment data for the message
+      final paymentData = {
+        'expense_id': expenseShare['expense_id'],
+        'expense_title': expenseShare['expenses']['title'],
+        'amount_paid': expenseShare['amount_owed'],
+        'paid_by': _supabase.auth.currentUser!.id,
+        'paid_by_name': currentUserProfile['display_name'],
+        'expense_share_id': expenseShareId,
+        'paid_at': DateTime.now().toIso8601String(),
+      };
+
+      // Send a payment message to the group
+      await sendGroupMessage(
+        groupId: expenseShare['expenses']['group_id'],
+        content:
+            '✅ ${currentUserProfile['display_name']} paid \$${expenseShare['amount_owed'].toStringAsFixed(2)} for ${expenseShare['expenses']['title']}',
+        category: 'payment',
+        paymentData: paymentData,
+      );
     } catch (e) {
       rethrow;
     }
@@ -1133,6 +1173,89 @@ class ChatService {
       }
 
       return result;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // Get existing paid members without payment messages
+  Future<List<Map<String, dynamic>>> getExistingPaidMembersWithoutMessages(
+    String groupId,
+  ) async {
+    try {
+      // Get all expenses for this group
+      final expenses = await getGroupExpenses(groupId);
+      final existingPaymentMessages = await getGroupMessagesByCategory(
+        groupId,
+        'payment',
+      );
+
+      // Create a set of expense share IDs that already have payment messages
+      final existingPaymentShareIds = <String>{};
+      for (final message in existingPaymentMessages) {
+        final paymentData = message['payment_data'] as Map<String, dynamic>?;
+        if (paymentData != null && paymentData['expense_share_id'] != null) {
+          existingPaymentShareIds.add(paymentData['expense_share_id']);
+        }
+      }
+
+      // Get all paid expense shares that don't have payment messages
+      final paidSharesWithoutMessages = <Map<String, dynamic>>[];
+
+      for (final expense in expenses) {
+        final expenseShares = await getExpenseDetailsWithPaymentStatus(
+          expense['id'],
+        );
+
+        for (final share in expenseShares) {
+          if (share['is_paid'] == true &&
+              !existingPaymentShareIds.contains(share['id'])) {
+            // This is a paid share without a payment message
+            paidSharesWithoutMessages.add({...share, 'expense': expense});
+          }
+        }
+      }
+
+      return paidSharesWithoutMessages;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // Generate payment messages for existing paid members
+  Future<void> generatePaymentMessagesForExistingPaidMembers(
+    String groupId,
+  ) async {
+    try {
+      final paidSharesWithoutMessages =
+          await getExistingPaidMembersWithoutMessages(groupId);
+
+      for (final share in paidSharesWithoutMessages) {
+        final profile = share['profiles'] as Map<String, dynamic>?;
+        final memberName = profile?['display_name'] ?? 'Unknown';
+        final expense = share['expense'] as Map<String, dynamic>;
+
+        // Create payment data for the message
+        final paymentData = {
+          'expense_id': share['expense_id'],
+          'expense_title': expense['title'],
+          'amount_paid': share['amount_owed'],
+          'paid_by': share['user_id'],
+          'paid_by_name': memberName,
+          'expense_share_id': share['id'],
+          'paid_at': share['paid_at'] ?? DateTime.now().toIso8601String(),
+          'is_historical': true, // Mark as historical payment
+        };
+
+        // Send a payment message to the group
+        await sendGroupMessage(
+          groupId: groupId,
+          content:
+              '✅ $memberName paid \$${share['amount_owed'].toStringAsFixed(2)} for ${expense['title']}',
+          category: 'payment',
+          paymentData: paymentData,
+        );
+      }
     } catch (e) {
       rethrow;
     }
