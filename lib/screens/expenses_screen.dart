@@ -942,7 +942,6 @@ class _ExpensesScreenState extends State<ExpensesScreen>
 
       return allShares;
     } catch (e) {
-      print('Error getting expense shares: $e');
       return [];
     }
   }

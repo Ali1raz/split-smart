@@ -659,7 +659,6 @@ class ChatService {
 
       return expenseId;
     } catch (e) {
-      print('Error creating expense: $e'); // Add debug logging
       rethrow;
     }
   }
@@ -701,7 +700,6 @@ class ChatService {
 
       return result;
     } catch (e) {
-      print('Error getting group expenses: $e'); // Add debug logging
       rethrow;
     }
   }
@@ -789,7 +787,6 @@ class ChatService {
 
       return result;
     } catch (e) {
-      print('Error getting user expense shares: $e'); // Add debug logging
       rethrow;
     }
   }
@@ -856,7 +853,6 @@ class ChatService {
 
       return result;
     } catch (e) {
-      print('Error getting user created expenses: $e');
       rethrow;
     }
   }
@@ -965,7 +961,6 @@ class ChatService {
 
       return result;
     } catch (e) {
-      print('Error getting messages by category: $e'); // Add debug logging
       rethrow;
     }
   }
@@ -1009,9 +1004,6 @@ class ChatService {
 
       return result;
     } catch (e) {
-      print(
-        'Error getting expense details with payment status: $e',
-      ); // Add debug logging
       rethrow;
     }
   }

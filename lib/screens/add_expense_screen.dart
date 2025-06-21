@@ -144,75 +144,10 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     }
   }
 
-  Future<void> _debugDatabase() async {
-    try {
-      final result = await _chatService.debugExpenseCreation(widget.groupId);
-      if (mounted) {
-        showDialog(
-          context: context,
-          builder:
-              (context) => AlertDialog(
-                title: const Text('Database Debug Info'),
-                content: SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text('Success: ${result['success']}'),
-                      Text('Expenses Table: ${result['expenses_table']}'),
-                      Text(
-                        'Expense Shares Table: ${result['expense_shares_table']}',
-                      ),
-                      Text('Profiles Table: ${result['profiles_table']}'),
-                      Text('Groups Table: ${result['groups_table']}'),
-                      Text(
-                        'Group Members Table: ${result['group_members_table']}',
-                      ),
-                      Text('Current User: ${result['current_user']}'),
-                      if (result['error'] != null) ...[
-                        const SizedBox(height: 16),
-                        const Text(
-                          'Error:',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        Text(result['error']),
-                      ],
-                    ],
-                  ),
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Close'),
-                  ),
-                ],
-              ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Debug error: $e')));
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    print('Building AddExpenseScreen'); // Debug print
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Add Expense'),
-        actions: [
-          // Debug button
-          IconButton(
-            onPressed: _debugDatabase,
-            icon: const Icon(Icons.bug_report),
-            tooltip: 'Debug Database',
-          ),
-        ],
-      ),
+      appBar: AppBar(title: const Text('Add Expense')),
       body:
           _isLoadingMembers
               ? const Center(child: CircularProgressIndicator())
