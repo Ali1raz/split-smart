@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'screens/login_screen.dart';
 import 'screens/register_screen.dart';
 import 'screens/profile_screen.dart';
+import 'screens/chat_list_screen.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 void main() async {
@@ -123,11 +124,34 @@ class MyApp extends StatelessWidget {
           color: const Color(0xFF1F2937),
         ),
       ),
-      initialRoute: '/login',
+      home: const AuthWrapper(),
       routes: {
         '/login': (context) => const LoginScreen(),
         '/register': (context) => const RegisterScreen(),
         '/profile': (context) => const ProfileScreen(),
+        '/chat_list': (context) => const ChatListScreen(),
+      },
+    );
+  }
+}
+
+class AuthWrapper extends StatelessWidget {
+  const AuthWrapper({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<AuthState>(
+      stream: Supabase.instance.client.auth.onAuthStateChange,
+      builder: (context, snapshot) {
+        if (snapshot.hasData) {
+          final session = snapshot.data!.session;
+          if (session != null) {
+            // User is logged in, show chat list
+            return const ChatListScreen();
+          }
+        }
+        // User is not logged in, show login screen
+        return const LoginScreen();
       },
     );
   }

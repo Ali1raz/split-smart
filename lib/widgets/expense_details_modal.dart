@@ -76,12 +76,6 @@ class _ExpenseDetailsModalState extends State<ExpenseDetailsModal>
     }
   }
 
-  void _closeModal() {
-    _animationController.reverse().then((_) {
-      Navigator.of(context).pop();
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);

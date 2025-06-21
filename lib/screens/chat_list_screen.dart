@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import '../services/chat_service.dart';
+import '../services/auth.dart';
 import 'chat_detail_screen.dart';
 import 'create_group_screen.dart';
 import 'group_chat_detail_screen.dart';
+import 'profile_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:async';
 
@@ -16,6 +18,7 @@ class ChatListScreen extends StatefulWidget {
 class _ChatListScreenState extends State<ChatListScreen>
     with SingleTickerProviderStateMixin {
   final ChatService _chatService = ChatService();
+  final AuthService _authService = AuthService();
   List<Map<String, dynamic>> _users = [];
   List<Map<String, dynamic>> _groups = [];
   bool _isLoading = true;
@@ -98,7 +101,100 @@ class _ChatListScreenState extends State<ChatListScreen>
     return Scaffold(
       appBar: AppBar(
         title: const Text('SplitSmart'),
-
+        actions: [
+          PopupMenuButton<String>(
+            onSelected: (value) {
+              switch (value) {
+                case 'profile':
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const ProfileScreen(),
+                    ),
+                  );
+                  break;
+                case 'stats':
+                  // TODO: Navigate to stats screen when created
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Stats feature coming soon!')),
+                  );
+                  break;
+                case 'expenses':
+                  // TODO: Create a dedicated "All Expenses" screen that shows expenses across all groups
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('All Expenses feature coming soon!'),
+                    ),
+                  );
+                  break;
+                case 'logout':
+                  _authService
+                      .logout()
+                      .then((_) {
+                        if (mounted) {
+                          Navigator.of(context).pushReplacementNamed('/login');
+                        }
+                      })
+                      .catchError((e) {
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Error logging out: $e')),
+                          );
+                        }
+                      });
+                  break;
+              }
+            },
+            itemBuilder:
+                (context) => [
+                  const PopupMenuItem(
+                    value: 'profile',
+                    child: Row(
+                      children: [
+                        Icon(Icons.person),
+                        SizedBox(width: 8),
+                        Text('Profile'),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'stats',
+                    child: Row(
+                      children: [
+                        Icon(Icons.analytics),
+                        SizedBox(width: 8),
+                        Text('Stats'),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'expenses',
+                    child: Row(
+                      children: [
+                        Icon(Icons.receipt_long),
+                        SizedBox(width: 8),
+                        Text('All Expenses'),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuDivider(),
+                  const PopupMenuItem(
+                    value: 'logout',
+                    child: Row(
+                      children: [
+                        Icon(Icons.logout),
+                        SizedBox(width: 8),
+                        Text('Logout'),
+                      ],
+                    ),
+                  ),
+                ],
+            child: const Padding(
+              padding: EdgeInsets.all(8.0),
+              child: Icon(Icons.more_vert),
+            ),
+          ),
+        ],
         bottom: TabBar(
           controller: _tabController,
           tabs: const [
