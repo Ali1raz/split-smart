@@ -32,6 +32,8 @@ class _GroupChatDetailScreenState extends State<GroupChatDetailScreen> {
   int _expensesCount = 0;
   List<Map<String, dynamic>> _currentMessages = [];
   StreamSubscription? _messagesSubscription;
+  final List<String> _selectedMessageIds = [];
+  final Set<String> _locallyDeletedMessageIds = {};
   String _selectedCategory = 'all';
   late String _currentGroupName;
 
@@ -188,10 +190,14 @@ class _GroupChatDetailScreenState extends State<GroupChatDetailScreen> {
   }
 
   List<Map<String, dynamic>> _getFilteredMessages() {
+    final filteredForLocalDeletion = _currentMessages.where(
+      (msg) => !_locallyDeletedMessageIds.contains(msg['id']),
+    );
+
     if (_selectedCategory == 'all') {
-      return _currentMessages;
+      return filteredForLocalDeletion.toList();
     }
-    return _currentMessages
+    return filteredForLocalDeletion
         .where((message) => message['category'] == _selectedCategory)
         .toList();
   }
@@ -365,6 +371,96 @@ class _GroupChatDetailScreenState extends State<GroupChatDetailScreen> {
     }
   }
 
+  void _onMessageLongPress(String messageId) {
+    setState(() {
+      if (_selectedMessageIds.contains(messageId)) {
+        _selectedMessageIds.remove(messageId);
+      } else {
+        _selectedMessageIds.add(messageId);
+      }
+    });
+  }
+
+  void _onMessageTap(Map<String, dynamic> message) {
+    if (_selectedMessageIds.isNotEmpty) {
+      setState(() {
+        if (_selectedMessageIds.contains(message['id'])) {
+          _selectedMessageIds.remove(message['id']);
+        } else {
+          _selectedMessageIds.add(message['id']);
+        }
+      });
+    } else if (message['category'] == 'expense') {
+      _showExpenseDetails(message);
+    }
+  }
+
+  void _clearSelection() {
+    setState(() {
+      _selectedMessageIds.clear();
+    });
+  }
+
+  Future<void> _deleteMessages() async {
+    if (_selectedMessageIds.isEmpty) return;
+
+    final currentUserId = Supabase.instance.client.auth.currentUser!.id;
+    final canDeleteForEveryone = _selectedMessageIds.every((msgId) {
+      final message = _currentMessages.firstWhere((m) => m['id'] == msgId);
+      return message['sender_id'] == currentUserId;
+    });
+
+    final deleteOption = await showDialog<String>(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: Text(
+              'Delete ${_selectedMessageIds.length} message${_selectedMessageIds.length > 1 ? 's' : ''}?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop('me'),
+                child: const Text('Delete for me'),
+              ),
+              if (canDeleteForEveryone)
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop('everyone'),
+                  child: const Text('Delete for Everyone'),
+                ),
+            ],
+          ),
+    );
+
+    if (deleteOption == null) return;
+
+    if (deleteOption == 'everyone') {
+      try {
+        await Future.wait(
+          _selectedMessageIds.map(
+            (id) => _chatService.softDeleteGroupMessage(id),
+          ),
+        );
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error deleting messages: $e')),
+          );
+        }
+      } finally {
+        _clearSelection();
+      }
+    } else if (deleteOption == 'me') {
+      setState(() {
+        _locallyDeletedMessageIds.addAll(_selectedMessageIds);
+      });
+      _clearSelection();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final currentUserId = Supabase.instance.client.auth.currentUser!.id;
@@ -377,340 +473,369 @@ class _GroupChatDetailScreenState extends State<GroupChatDetailScreen> {
     final subtitleText = memberNames.join(', ');
 
     return Scaffold(
-      appBar: AppBar(
-        title: GestureDetector(
-          onTap: _showGroupDetailsModal,
-          child: Row(
-            children: [
-              CircleAvatar(
-                backgroundColor: theme.colorScheme.secondaryContainer,
-                child: Icon(
-                  Icons.group,
-                  color: theme.colorScheme.onSecondaryContainer,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      _currentGroupName,
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    if (subtitleText.isNotEmpty)
-                      Text(
-                        subtitleText,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.bodySmall,
+      appBar:
+          _selectedMessageIds.isNotEmpty
+              ? _buildSelectionAppBar()
+              : AppBar(
+                title: GestureDetector(
+                  onTap: _showGroupDetailsModal,
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        backgroundColor: theme.colorScheme.secondaryContainer,
+                        child: Icon(
+                          Icons.group,
+                          color: theme.colorScheme.onSecondaryContainer,
+                        ),
                       ),
-                  ],
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _currentGroupName,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            if (subtitleText.isNotEmpty)
+                              Text(
+                                subtitleText,
+                                overflow: TextOverflow.ellipsis,
+                                style: theme.textTheme.bodySmall,
+                              ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          // Category filter
-          PopupMenuButton<String>(
-            onSelected: (value) async {
-              setState(() {
-                _selectedCategory = value;
-              });
-              // Check for existing paid members when payment filter is selected
-              if (value == 'payment') {
-                await _ensurePaymentMessagesExist();
-              }
-            },
-            itemBuilder:
-                (context) => [
-                  const PopupMenuItem(
-                    value: 'all',
-                    child: Row(
-                      children: [
-                        Icon(Icons.all_inbox),
-                        SizedBox(width: 8),
-                        Text('All Messages'),
-                      ],
-                    ),
-                  ),
-                  const PopupMenuItem(
-                    value: 'general',
-                    child: Row(
-                      children: [
-                        Icon(Icons.chat),
-                        SizedBox(width: 8),
-                        Text('General'),
-                      ],
-                    ),
-                  ),
-                  const PopupMenuItem(
-                    value: 'expense',
-                    child: Row(
-                      children: [
-                        Icon(Icons.receipt),
-                        SizedBox(width: 8),
-                        Text('Expenses'),
-                      ],
-                    ),
-                  ),
-                  const PopupMenuItem(
-                    value: 'payment',
-                    child: Row(
-                      children: [
-                        Icon(Icons.payment),
-                        SizedBox(width: 8),
-                        Text('Payments'),
-                      ],
-                    ),
-                  ),
-                ],
-            child: Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    _selectedCategory == 'all'
-                        ? Icons.all_inbox
-                        : _selectedCategory == 'expense'
-                        ? Icons.receipt
-                        : _selectedCategory == 'payment'
-                        ? Icons.payment
-                        : Icons.chat,
-                  ),
-                  const SizedBox(width: 4),
-                  const Icon(Icons.arrow_drop_down),
-                ],
-              ),
-            ),
-          ),
-          PopupMenuButton<String>(
-            onSelected: (value) async {
-              switch (value) {
-                case 'expenses':
-                  await Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder:
-                          (context) => ExpensesScreen(
-                            groupId: widget.groupId,
-                            groupName: _currentGroupName,
-                          ),
-                    ),
-                  );
-                  break;
-                case 'add_expense':
-                  final result = await Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder:
-                          (context) => AddExpenseScreen(
-                            groupId: widget.groupId,
-                            groupName: _currentGroupName,
-                          ),
-                    ),
-                  );
-                  if (result == true) {
-                    // Refresh messages if expense was added
-                    _loadInitialMessages();
-                  }
-                  break;
-                case 'manage':
-                  final result = await Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder:
-                          (context) => GroupManagementScreen(
-                            groupId: widget.groupId,
-                            groupName: _currentGroupName,
-                          ),
-                    ),
-                  );
-                  // If group was renamed, update the title
-                  if (result != null && result is String) {
-                    if (result == 'deleted') {
-                      // Group was deleted, navigate back to chat list
-                      if (mounted) {
-                        Navigator.of(
-                          context,
-                        ).popUntil((route) => route.isFirst);
-                      }
-                    } else {
-                      // Group was renamed
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Group renamed to: $result')),
-                        );
-                      }
+                actions: [
+                  // Category filter
+                  PopupMenuButton<String>(
+                    onSelected: (value) async {
                       setState(() {
-                        _currentGroupName = result;
+                        _selectedCategory = value;
                       });
-                    }
-                  }
-                  break;
-              }
-            },
-            itemBuilder:
-                (context) => [
-                  const PopupMenuItem(
-                    value: 'expenses',
-                    child: Row(
-                      children: [
-                        Icon(Icons.receipt_long),
-                        SizedBox(width: 8),
-                        Text('View Expenses'),
-                      ],
+                      // Check for existing paid members when payment filter is selected
+                      if (value == 'payment') {
+                        await _ensurePaymentMessagesExist();
+                      }
+                    },
+                    itemBuilder:
+                        (context) => [
+                          const PopupMenuItem(
+                            value: 'all',
+                            child: Row(
+                              children: [
+                                Icon(Icons.all_inbox),
+                                SizedBox(width: 8),
+                                Text('All Messages'),
+                              ],
+                            ),
+                          ),
+                          const PopupMenuItem(
+                            value: 'general',
+                            child: Row(
+                              children: [
+                                Icon(Icons.chat),
+                                SizedBox(width: 8),
+                                Text('General'),
+                              ],
+                            ),
+                          ),
+                          const PopupMenuItem(
+                            value: 'expense',
+                            child: Row(
+                              children: [
+                                Icon(Icons.receipt),
+                                SizedBox(width: 8),
+                                Text('Expenses'),
+                              ],
+                            ),
+                          ),
+                          const PopupMenuItem(
+                            value: 'payment',
+                            child: Row(
+                              children: [
+                                Icon(Icons.payment),
+                                SizedBox(width: 8),
+                                Text('Payments'),
+                              ],
+                            ),
+                          ),
+                        ],
+                    child: Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            _selectedCategory == 'all'
+                                ? Icons.all_inbox
+                                : _selectedCategory == 'expense'
+                                ? Icons.receipt
+                                : _selectedCategory == 'payment'
+                                ? Icons.payment
+                                : Icons.chat,
+                          ),
+                          const SizedBox(width: 4),
+                          const Icon(Icons.arrow_drop_down),
+                        ],
+                      ),
                     ),
                   ),
-                  const PopupMenuItem(
-                    value: 'add_expense',
-                    child: Row(
-                      children: [
-                        Icon(Icons.add),
-                        SizedBox(width: 8),
-                        Text('Add Expense'),
-                      ],
-                    ),
-                  ),
-                  const PopupMenuItem(
-                    value: 'manage',
-                    child: Row(
-                      children: [
-                        Icon(Icons.settings),
-                        SizedBox(width: 8),
-                        Text('Manage Group'),
-                      ],
-                    ),
+                  PopupMenuButton<String>(
+                    onSelected: (value) async {
+                      switch (value) {
+                        case 'expenses':
+                          await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder:
+                                  (context) => ExpensesScreen(
+                                    groupId: widget.groupId,
+                                    groupName: _currentGroupName,
+                                  ),
+                            ),
+                          );
+                          break;
+                        case 'add_expense':
+                          final result = await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder:
+                                  (context) => AddExpenseScreen(
+                                    groupId: widget.groupId,
+                                    groupName: _currentGroupName,
+                                  ),
+                            ),
+                          );
+                          if (result == true) {
+                            // Refresh messages if expense was added
+                            _loadInitialMessages();
+                          }
+                          break;
+                        case 'manage':
+                          final result = await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder:
+                                  (context) => GroupManagementScreen(
+                                    groupId: widget.groupId,
+                                    groupName: _currentGroupName,
+                                  ),
+                            ),
+                          );
+                          // If group was renamed, update the title
+                          if (result != null && result is String) {
+                            if (result == 'deleted') {
+                              // Group was deleted, navigate back to chat list
+                              if (mounted) {
+                                Navigator.of(
+                                  context,
+                                ).popUntil((route) => route.isFirst);
+                              }
+                            } else {
+                              // Group was renamed
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Group renamed to: $result'),
+                                  ),
+                                );
+                              }
+                              setState(() {
+                                _currentGroupName = result;
+                              });
+                            }
+                          }
+                          break;
+                      }
+                    },
+                    itemBuilder:
+                        (context) => [
+                          const PopupMenuItem(
+                            value: 'expenses',
+                            child: Row(
+                              children: [
+                                Icon(Icons.receipt_long),
+                                SizedBox(width: 8),
+                                Text('View Expenses'),
+                              ],
+                            ),
+                          ),
+                          const PopupMenuItem(
+                            value: 'add_expense',
+                            child: Row(
+                              children: [
+                                Icon(Icons.add),
+                                SizedBox(width: 8),
+                                Text('Add Expense'),
+                              ],
+                            ),
+                          ),
+                          const PopupMenuItem(
+                            value: 'manage',
+                            child: Row(
+                              children: [
+                                Icon(Icons.settings),
+                                SizedBox(width: 8),
+                                Text('Manage Group'),
+                              ],
+                            ),
+                          ),
+                        ],
                   ),
                 ],
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          // Category filter indicator
-          if (_selectedCategory != 'all')
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              color: theme.colorScheme.primaryContainer,
-              child: Row(
-                children: [
-                  Icon(
-                    _selectedCategory == 'expense'
-                        ? Icons.receipt
-                        : _selectedCategory == 'payment'
-                        ? Icons.payment
-                        : Icons.chat,
-                    size: 16,
-                    color: theme.colorScheme.onPrimaryContainer,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Showing ${_selectedCategory} messages',
-                    style: theme.textTheme.bodySmall?.copyWith(
+              ),
+      body: GestureDetector(
+        onTap: _selectedMessageIds.isNotEmpty ? _clearSelection : null,
+        child: Column(
+          children: [
+            // Category filter indicator
+            if (_selectedCategory != 'all')
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
+                color: theme.colorScheme.primaryContainer,
+                child: Row(
+                  children: [
+                    Icon(
+                      _selectedCategory == 'expense'
+                          ? Icons.receipt
+                          : _selectedCategory == 'payment'
+                          ? Icons.payment
+                          : Icons.chat,
+                      size: 16,
                       color: theme.colorScheme.onPrimaryContainer,
                     ),
-                  ),
-                  const Spacer(),
-                  TextButton(
-                    onPressed: () {
-                      setState(() {
-                        _selectedCategory = 'all';
-                      });
-                    },
-                    child: Text(
-                      'Show All',
-                      style: TextStyle(
+                    const SizedBox(width: 8),
+                    Text(
+                      'Showing ${_selectedCategory} messages',
+                      style: theme.textTheme.bodySmall?.copyWith(
                         color: theme.colorScheme.onPrimaryContainer,
                       ),
                     ),
-                  ),
-                ],
-              ),
-            ),
-          Expanded(
-            child:
-                _isLoadingSummary
-                    ? const Center(child: CircularProgressIndicator())
-                    : filteredMessages.isEmpty
-                    ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            _selectedCategory == 'expense'
-                                ? Icons.receipt_outlined
-                                : _selectedCategory == 'payment'
-                                ? Icons.payment_outlined
-                                : Icons.chat_outlined,
-                            size: 64,
-                            color: Colors.grey,
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            _selectedCategory == 'all'
-                                ? 'No messages yet. Say hi!'
-                                : _selectedCategory == 'payment'
-                                ? 'No payment confirmations yet'
-                                : 'No ${_selectedCategory} messages',
-                          ),
-                          if (_selectedCategory == 'payment') ...[
-                            const SizedBox(height: 16),
-                            ElevatedButton.icon(
-                              onPressed: () async {
-                                await _ensurePaymentMessagesExist();
-                              },
-                              icon: const Icon(Icons.history),
-                              label: const Text('Check Existing Payments'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: theme.colorScheme.secondary,
-                                foregroundColor: theme.colorScheme.onSecondary,
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    )
-                    : ListView.builder(
-                      controller: _scrollController,
-                      reverse: true,
-                      padding: const EdgeInsets.all(16),
-                      itemCount: _getGroupedMessages().length,
-                      itemBuilder: (context, index) {
-                        final groupedMessages = _getGroupedMessages();
-                        final item =
-                            groupedMessages[groupedMessages.length - 1 - index];
-
-                        if (item['type'] == 'day_separator') {
-                          return _buildDaySeparator(
-                            item['display_text'],
-                            theme,
-                          );
-                        } else {
-                          final message = item['data'];
-                          final senderId = message['sender_id'];
-                          final isMe = senderId == currentUserId;
-                          final senderProfile = _memberProfiles[senderId];
-                          final senderName =
-                              senderProfile?['display_name'] ?? 'Unknown';
-
-                          return _buildMessageBubble(
-                            context,
-                            message,
-                            isMe,
-                            senderName,
-                            theme,
-                          );
-                        }
+                    const Spacer(),
+                    TextButton(
+                      onPressed: () {
+                        setState(() {
+                          _selectedCategory = 'all';
+                        });
                       },
+                      child: Text(
+                        'Show All',
+                        style: TextStyle(
+                          color: theme.colorScheme.onPrimaryContainer,
+                        ),
+                      ),
                     ),
-          ),
-          _buildMessageInput(theme),
-        ],
+                  ],
+                ),
+              ),
+            Expanded(
+              child:
+                  _isLoadingSummary
+                      ? const Center(child: CircularProgressIndicator())
+                      : filteredMessages.isEmpty
+                      ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              _selectedCategory == 'expense'
+                                  ? Icons.receipt_outlined
+                                  : _selectedCategory == 'payment'
+                                  ? Icons.payment_outlined
+                                  : Icons.chat_outlined,
+                              size: 64,
+                              color: Colors.grey,
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              _selectedCategory == 'all'
+                                  ? 'No messages yet. Say hi!'
+                                  : _selectedCategory == 'payment'
+                                  ? 'No payment confirmations yet'
+                                  : 'No ${_selectedCategory} messages',
+                            ),
+                            if (_selectedCategory == 'payment') ...[
+                              const SizedBox(height: 16),
+                              ElevatedButton.icon(
+                                onPressed: () async {
+                                  await _ensurePaymentMessagesExist();
+                                },
+                                icon: const Icon(Icons.history),
+                                label: const Text('Check Existing Payments'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: theme.colorScheme.secondary,
+                                  foregroundColor:
+                                      theme.colorScheme.onSecondary,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      )
+                      : ListView.builder(
+                        controller: _scrollController,
+                        reverse: true,
+                        padding: const EdgeInsets.all(16),
+                        itemCount: _getGroupedMessages().length,
+                        itemBuilder: (context, index) {
+                          final groupedMessages = _getGroupedMessages();
+                          final item =
+                              groupedMessages[groupedMessages.length -
+                                  1 -
+                                  index];
+
+                          if (item['type'] == 'day_separator') {
+                            return _buildDaySeparator(
+                              item['display_text'],
+                              theme,
+                            );
+                          } else {
+                            final message = item['data'];
+                            final senderId = message['sender_id'];
+                            final isMe = senderId == currentUserId;
+                            final senderProfile = _memberProfiles[senderId];
+                            final senderName =
+                                senderProfile?['display_name'] ?? 'Unknown';
+
+                            return _buildMessageBubble(
+                              context,
+                              message,
+                              isMe,
+                              senderName,
+                              theme,
+                            );
+                          }
+                        },
+                      ),
+            ),
+            _buildMessageInput(theme),
+          ],
+        ),
       ),
+    );
+  }
+
+  AppBar _buildSelectionAppBar() {
+    return AppBar(
+      leading: IconButton(
+        icon: const Icon(Icons.close),
+        onPressed: _clearSelection,
+      ),
+      title: Text('${_selectedMessageIds.length} selected'),
+      actions: [
+        IconButton(icon: const Icon(Icons.delete), onPressed: _deleteMessages),
+      ],
     );
   }
 
@@ -724,6 +849,8 @@ class _GroupChatDetailScreenState extends State<GroupChatDetailScreen> {
     final category = message['category'] ?? 'general';
     final isExpense = category == 'expense';
     final isPayment = category == 'payment';
+    final isDeleted = message['is_deleted'] == true;
+    final isSelected = _selectedMessageIds.contains(message['id']);
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
@@ -738,7 +865,9 @@ class _GroupChatDetailScreenState extends State<GroupChatDetailScreen> {
           ],
           Flexible(
             child: GestureDetector(
-              onTap: isExpense ? () => _showExpenseDetails(message) : null,
+              onLongPress:
+                  !isDeleted ? () => _onMessageLongPress(message['id']) : null,
+              onTap: () => _onMessageTap(message),
               child: Container(
                 constraints: BoxConstraints(
                   maxWidth: MediaQuery.of(context).size.width * 0.7,
@@ -749,7 +878,11 @@ class _GroupChatDetailScreenState extends State<GroupChatDetailScreen> {
                 ),
                 decoration: BoxDecoration(
                   color:
-                      isExpense
+                      isSelected
+                          ? theme.colorScheme.inversePrimary.withValues(
+                            alpha: 0.9,
+                          )
+                          : isExpense
                           ? theme.colorScheme.tertiaryContainer.withValues(
                             alpha: 0.3,
                           )
@@ -804,172 +937,193 @@ class _GroupChatDetailScreenState extends State<GroupChatDetailScreen> {
                         ),
                       ),
                     if (!isMe) const SizedBox(height: 4),
-                    if (isExpense) ...[
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.tertiary.withValues(
-                            alpha: 0.1,
+                    if (isDeleted)
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.block,
+                            size: 14,
+                            color: theme.textTheme.bodySmall?.color,
                           ),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.receipt,
-                              size: 14,
-                              color: theme.colorScheme.tertiary,
+                          const SizedBox(width: 4),
+                          Text(
+                            message['content'],
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              fontStyle: FontStyle.italic,
                             ),
-                            const SizedBox(width: 4),
-                            Text(
-                              'Expense',
-                              style: TextStyle(
-                                fontSize: 10,
-                                color: theme.colorScheme.tertiary,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                    ],
-                    if (isPayment) ...[
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.secondary.withValues(
-                            alpha: 0.1,
                           ),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.payment,
-                              size: 14,
-                              color: theme.colorScheme.secondary,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              message['payment_data']?['is_historical'] == true
-                                  ? 'Historical Payment'
-                                  : 'Payment',
-                              style: TextStyle(
-                                fontSize: 10,
-                                color: theme.colorScheme.secondary,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      // Show payment details
-                      if (message['payment_data'] != null) ...[
+                        ],
+                      )
+                    else ...[
+                      if (isExpense) ...[
                         Container(
-                          padding: const EdgeInsets.all(8),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
                           decoration: BoxDecoration(
-                            color: theme.colorScheme.secondary.withValues(
-                              alpha: 0.05,
+                            color: theme.colorScheme.tertiary.withValues(
+                              alpha: 0.1,
                             ),
                             borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color: theme.colorScheme.secondary.withValues(
-                                alpha: 0.2,
-                              ),
-                            ),
                           ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
                             children: [
-                              Row(
-                                children: [
-                                  Icon(
-                                    Icons.person,
-                                    size: 16,
-                                    color: theme.colorScheme.secondary,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    'Paid by: ${message['payment_data']['paid_by_name'] ?? 'Unknown'}',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: theme.colorScheme.secondary,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ],
+                              Icon(
+                                Icons.receipt,
+                                size: 14,
+                                color: theme.colorScheme.tertiary,
                               ),
-                              const SizedBox(height: 4),
-                              Row(
-                                children: [
-                                  Icon(
-                                    Icons.attach_money,
-                                    size: 16,
-                                    color: theme.colorScheme.secondary,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    'Amount: \$${(message['payment_data']['amount_paid'] as num?)?.toStringAsFixed(2) ?? '0.00'}',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: theme.colorScheme.secondary,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 4),
-                              Row(
-                                children: [
-                                  Icon(
-                                    Icons.receipt,
-                                    size: 16,
-                                    color: theme.colorScheme.secondary,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Expanded(
-                                    child: Text(
-                                      'For: ${message['payment_data']['expense_title'] ?? 'Unknown Expense'}',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: theme.colorScheme.secondary,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                ],
+                              const SizedBox(width: 4),
+                              Text(
+                                'Expense',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: theme.colorScheme.tertiary,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
                             ],
                           ),
                         ),
                         const SizedBox(height: 8),
                       ],
-                    ],
-                    Text(
-                      message['content'],
-                      style: TextStyle(
-                        color:
-                            isMe
-                                ? theme.colorScheme.onPrimary
-                                : isExpense
-                                ? theme.colorScheme.onSurface
-                                : isPayment
-                                ? theme.colorScheme.onSurface
-                                : theme.colorScheme.onSurfaceVariant,
-                        fontSize: 15,
+                      if (isPayment) ...[
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.secondary.withValues(
+                              alpha: 0.1,
+                            ),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.payment,
+                                size: 14,
+                                color: theme.colorScheme.secondary,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                message['payment_data']?['is_historical'] ==
+                                        true
+                                    ? 'Historical Payment'
+                                    : 'Payment',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: theme.colorScheme.secondary,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        // Show payment details
+                        if (message['payment_data'] != null) ...[
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.secondary.withValues(
+                                alpha: 0.05,
+                              ),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: theme.colorScheme.secondary.withValues(
+                                  alpha: 0.2,
+                                ),
+                              ),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Icon(
+                                      Icons.person,
+                                      size: 16,
+                                      color: theme.colorScheme.secondary,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      'Paid by: ${message['payment_data']['paid_by_name'] ?? 'Unknown'}',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: theme.colorScheme.secondary,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    Icon(
+                                      Icons.attach_money,
+                                      size: 16,
+                                      color: theme.colorScheme.secondary,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      'Amount: \$${(message['payment_data']['amount_paid'] as num?)?.toStringAsFixed(2) ?? '0.00'}',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: theme.colorScheme.secondary,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    Icon(
+                                      Icons.receipt,
+                                      size: 16,
+                                      color: theme.colorScheme.secondary,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Expanded(
+                                      child: Text(
+                                        'For: ${message['payment_data']['expense_title'] ?? 'Unknown Expense'}',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: theme.colorScheme.secondary,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                        ],
+                      ],
+                      Text(
+                        message['content'],
+                        style: TextStyle(
+                          color:
+                              isMe
+                                  ? theme.colorScheme.onPrimary
+                                  : isExpense
+                                  ? theme.colorScheme.onSurface
+                                  : isPayment
+                                  ? theme.colorScheme.onSurface
+                                  : theme.colorScheme.onSurfaceVariant,
+                          fontSize: 15,
+                        ),
                       ),
-                    ),
+                    ],
                     const SizedBox(height: 4),
                     // Timestamp
                     Align(

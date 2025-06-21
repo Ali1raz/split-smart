@@ -1328,4 +1328,26 @@ class ChatService {
       rethrow;
     }
   }
+
+  Future<void> softDeleteGroupMessage(String messageId) async {
+    try {
+      await Supabase.instance.client
+          .from('group_messages')
+          .update({'is_deleted': true, 'content': 'This message was deleted'})
+          .eq('id', messageId);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<void> softDeleteDirectMessage(String messageId) async {
+    try {
+      await Supabase.instance.client
+          .from('messages')
+          .update({'is_deleted': true, 'content': 'This message was deleted'})
+          .eq('id', messageId);
+    } catch (e) {
+      rethrow;
+    }
+  }
 }
