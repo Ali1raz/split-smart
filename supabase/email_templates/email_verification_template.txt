@@ -1,0 +1,38 @@
+Split Smart - Email Verification
+================================
+
+Hello,
+
+Thank you for signing up for Split Smart! To complete your registration, 
+please verify your email address using the code below.
+
+Your Verification Code: {{ .Token }}
+
+⚠️  IMPORTANT: This code will expire in 10 minutes ⚠️
+
+How to verify your email:
+1. Open the Split Smart app
+2. Go to the email verification screen
+3. Enter the verification code above
+4. Tap "Verify" to complete registration
+
+📧 Why verify your email?
+- Secure your account and protect your data
+- Enable password reset functionality
+- Receive important notifications about your expenses
+- Ensure you can access all app features
+
+🔒 Security Notice: Never share this verification code with anyone. 
+Split Smart will never ask you for this code via phone, email, or any 
+other method.
+
+If you didn't create an account with Split Smart, you can safely ignore 
+this email.
+
+Best regards,
+The Split Smart Team
+
+---
+This email was sent to {{ .Email }}
+If you didn't request this verification, please ignore this email.
+© 2024 Split Smart. All rights reserved. 
