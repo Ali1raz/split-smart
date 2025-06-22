@@ -20,19 +20,7 @@ class AuthService {
         password: password,
         emailRedirectTo: null,
       );
-
-      // Create initial profile
-      if (response.user != null) {
-        await _supabase.from('profiles').insert({
-          'id': response.user!.id,
-          'username': email.split('@')[0], // Use part of email as username
-          'display_name':
-              email.split('@')[0], // Use part of email as display name
-          'created_at': DateTime.now().toUtc().toIso8601String(),
-          'updated_at': DateTime.now().toUtc().toIso8601String(),
-        });
-      }
-
+      // Do NOT create profile here. Only after email is verified.
       return response;
     } catch (e) {
       rethrow;
@@ -59,6 +47,25 @@ class AuthService {
         token: token,
         type: OtpType.signup,
       );
+      // After successful verification, create profile if not exists
+      if (response.user != null) {
+        final userId = response.user!.id;
+        final existing =
+            await _supabase
+                .from('profiles')
+                .select('id')
+                .eq('id', userId)
+                .maybeSingle();
+        if (existing == null) {
+          await _supabase.from('profiles').insert({
+            'id': userId,
+            'username': email.split('@')[0],
+            'display_name': email.split('@')[0],
+            'created_at': DateTime.now().toUtc().toIso8601String(),
+            'updated_at': DateTime.now().toUtc().toIso8601String(),
+          });
+        }
+      }
       return response;
     } catch (e) {
       rethrow;
