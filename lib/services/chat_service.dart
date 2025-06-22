@@ -1,3 +1,4 @@
+import 'package:split_smart_supabase/utils/constants.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ChatService {
@@ -35,8 +36,10 @@ class ChatService {
     required List<String> memberIds,
   }) async {
     try {
-      if (memberIds.length > 5) {
-        throw Exception('Group can have maximum 5 members');
+      if (memberIds.length > AppConstants.maxMembersAllowed) {
+        throw Exception(
+          'Group can have maximum ${AppConstants.maxMembersAllowed} more members',
+        );
       }
 
       // Create the group
@@ -323,10 +326,10 @@ class ChatService {
         throw Exception('Only admins can add members to the group');
       }
 
-      // Check if group already has 5 members
+      // Check if group already has max members
       final currentMembers = await getGroupMembers(groupId);
-      if (currentMembers.length >= 5) {
-        throw Exception('Group already has maximum 5 members');
+      if (currentMembers.length >= AppConstants.maxMembersAllowed) {
+        throw Exception('Group already has maximum members');
       }
 
       // Check if user is already a member

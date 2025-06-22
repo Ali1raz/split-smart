@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/chat_service.dart';
+import '../utils/constants.dart';
 
 class CreateGroupScreen extends StatefulWidget {
   const CreateGroupScreen({super.key});
@@ -136,7 +137,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
                       child: Align(
                         alignment: Alignment.centerLeft,
                         child: Text(
-                          'Select Members (${_selectedUserIds.length}/5)',
+                          'Select Members (${_selectedUserIds.length}/${AppConstants.maxMembersAllowed})',
                           style: Theme.of(context).textTheme.titleMedium,
                         ),
                       ),
@@ -153,7 +154,8 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
                                     user['id'],
                                   );
                                   final canSelectMore =
-                                      _selectedUserIds.length < 5;
+                                      _selectedUserIds.length <
+                                      AppConstants.maxMembersAllowed;
 
                                   return CheckboxListTile(
                                     title: Text(

@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:convert';
 import 'package:path_provider/path_provider.dart';
+import 'package:split_smart_supabase/utils/constants.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
 
@@ -10,12 +11,10 @@ class CsvExportService {
   // Get the documents directory path
   Future<String> _getDocumentsPath() async {
     if (Platform.isAndroid) {
-      // For Android, use the external storage documents directory
-      const documentsPath =
-          '/storage/emulated/0/documents/split_smart_expenses';
+      final documentsPath = AppConstants.documentsPath;
 
       // Create the directory if it doesn't exist
-      final documentsDir = Directory(documentsPath);
+      final documentsDir = Directory(AppConstants.documentsPath);
       if (!await documentsDir.exists()) {
         await documentsDir.create(recursive: true);
       }
