@@ -993,7 +993,7 @@ class _GroupChatDetailScreenState extends State<GroupChatDetailScreen> {
                                     ),
                                     const SizedBox(width: 4),
                                     Text(
-                                      'Amount: \$${(message['payment_data']['amount_paid'] as num?)?.toStringAsFixed(2) ?? '0.00'}',
+                                      'Amount: Rs ${(message['payment_data']['amount_paid'] as num?)?.toStringAsFixed(2) ?? '0.00'}',
                                       style: TextStyle(
                                         fontSize: 12,
                                         color: theme.colorScheme.secondary,

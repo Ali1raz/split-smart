@@ -174,7 +174,7 @@ class _AllExpenseSharesScreenState extends State<AllExpenseSharesScreen> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'Amount owed: \$${amountOwed.toStringAsFixed(2)}',
+                            'Amount owed: Rs ${amountOwed.toStringAsFixed(2)}',
                             style: theme.textTheme.bodySmall?.copyWith(
                               color: theme.colorScheme.primary,
                               fontWeight: FontWeight.w500,
@@ -187,7 +187,7 @@ class _AllExpenseSharesScreenState extends State<AllExpenseSharesScreen> {
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
                           Text(
-                            '\$${amountOwed.toStringAsFixed(2)}',
+                            'Rs ${amountOwed.toStringAsFixed(2)}',
                             style: theme.textTheme.bodyMedium?.copyWith(
                               fontWeight: FontWeight.bold,
                               color:

@@ -192,7 +192,7 @@ class _StatsScreenState extends State<StatsScreen>
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  '\$${amount.toStringAsFixed(2)}',
+                  'Rs ${amount.toStringAsFixed(2)}',
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
@@ -208,7 +208,7 @@ class _StatsScreenState extends State<StatsScreen>
       context,
       title: title,
       subtitle: '${expenses.length} expense${expenses.length != 1 ? 's' : ''}',
-      totalAmount: '\$${totalAmount.toStringAsFixed(2)}',
+      totalAmount: 'Rs ${totalAmount.toStringAsFixed(2)}',
       icon: Icons.receipt_long,
       children: expenseItems,
       isEmpty: expenses.isEmpty,
@@ -469,7 +469,7 @@ class _StatsScreenState extends State<StatsScreen>
       children: [
         StatItem(
           label: 'Total Owed',
-          value: '\$${totalOwed.toStringAsFixed(2)}',
+          value: 'Rs ${totalOwed.toStringAsFixed(2)}',
           icon: Icons.account_balance_wallet,
           color: theme.colorScheme.error,
           onTap:
@@ -477,7 +477,7 @@ class _StatsScreenState extends State<StatsScreen>
         ),
         StatItem(
           label: 'Total Paid',
-          value: '\$${totalPaid.toStringAsFixed(2)}',
+          value: 'Rs ${totalPaid.toStringAsFixed(2)}',
           icon: Icons.check_circle,
           color: theme.colorScheme.primary,
           onTap:
@@ -485,7 +485,7 @@ class _StatsScreenState extends State<StatsScreen>
         ),
         StatItem(
           label: 'Total Created',
-          value: '\$${totalCreated.toStringAsFixed(2)}',
+          value: 'Rs ${totalCreated.toStringAsFixed(2)}',
           icon: Icons.add_circle,
           color: theme.colorScheme.secondary,
           onTap:
@@ -601,14 +601,14 @@ class _StatsScreenState extends State<StatsScreen>
       children: [
         StatItem(
           label: 'Avg Amount',
-          value: '\$${avgAmountOwed.toStringAsFixed(2)}',
+          value: 'Rs ${avgAmountOwed.toStringAsFixed(2)}',
           icon: Icons.calculate,
           color: theme.colorScheme.primary,
           onTap: null, // No details for average
         ),
         StatItem(
           label: 'Max Amount',
-          value: '\$${maxAmountOwed.toStringAsFixed(2)}',
+          value: 'Rs ${maxAmountOwed.toStringAsFixed(2)}',
           icon: Icons.trending_up,
           color: theme.colorScheme.error,
           onTap: null, // No details for max

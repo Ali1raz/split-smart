@@ -213,7 +213,7 @@ class _AllExpensesScreenState extends State<AllExpensesScreen>
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  '\$${amount.toStringAsFixed(2)}',
+                  'Rs ${amount.toStringAsFixed(2)}',
                   style: theme.textTheme.titleMedium?.copyWith(
                     color: theme.colorScheme.primary,
                     fontWeight: FontWeight.bold,
@@ -349,7 +349,7 @@ class _AllExpensesScreenState extends State<AllExpensesScreen>
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(
-                      '\$${amountOwed.toStringAsFixed(2)}',
+                      'Rs ${amountOwed.toStringAsFixed(2)}',
                       style: theme.textTheme.titleMedium?.copyWith(
                         color: theme.colorScheme.primary,
                         fontWeight: FontWeight.bold,

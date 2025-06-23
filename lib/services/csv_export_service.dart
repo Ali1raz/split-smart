@@ -307,7 +307,7 @@ class CsvExportService {
           expense['id'],
           _escapeCsvField(expense['title']),
           _escapeCsvField(expense['description'] ?? ''),
-          '\$${(expense['total_amount'] as num).toStringAsFixed(2)}',
+          'Rs ${(expense['total_amount'] as num).toStringAsFixed(2)}',
           'USD',
           _escapeCsvField(expense['payer_name']),
           _escapeCsvField(expense['payer_email']),
@@ -348,7 +348,7 @@ class CsvExportService {
             _escapeCsvField(expense['title']),
             _escapeCsvField(share['member_name']),
             _escapeCsvField(share['member_email']),
-            '\$${(share['amount_owed'] as num).toStringAsFixed(2)}',
+            'Rs ${(share['amount_owed'] as num).toStringAsFixed(2)}',
             share['is_paid'] == true ? 'Yes' : 'No',
             paidDate,
           ].join(','),
@@ -395,10 +395,10 @@ class CsvExportService {
 
     // Overall summary
     buffer.writeln('Total Expenses,${expenses.length}');
-    buffer.writeln('Total Amount,\$${totalAmount.toStringAsFixed(2)}');
-    buffer.writeln('Total Paid,\$${totalPaid.toStringAsFixed(2)}');
+    buffer.writeln('Total Amount,Rs ${totalAmount.toStringAsFixed(2)}');
+    buffer.writeln('Total Paid,Rs ${totalPaid.toStringAsFixed(2)}');
     buffer.writeln(
-      'Total Outstanding,\$${(totalAmount - totalPaid).toStringAsFixed(2)}',
+      'Total Outstanding,Rs ${(totalAmount - totalPaid).toStringAsFixed(2)}',
     );
     buffer.writeln('Total Shares,$totalShares');
     buffer.writeln('Paid Shares,$paidShares');
@@ -423,9 +423,9 @@ class CsvExportService {
       buffer.writeln(
         [
           _escapeCsvField(memberName),
-          '\$${totalOwed.toStringAsFixed(2)}',
-          '\$${totalPaidByMember.toStringAsFixed(2)}',
-          '\$${outstanding.toStringAsFixed(2)}',
+          'Rs ${totalOwed.toStringAsFixed(2)}',
+          'Rs ${totalPaidByMember.toStringAsFixed(2)}',
+          'Rs ${outstanding.toStringAsFixed(2)}',
           '${progress.toStringAsFixed(1)}%',
         ].join(','),
       );

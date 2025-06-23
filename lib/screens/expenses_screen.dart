@@ -197,7 +197,7 @@ class _ExpensesScreenState extends State<ExpensesScreen>
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  '\$${totalExpenses.toStringAsFixed(2)}',
+                  'Rs ${totalExpenses.toStringAsFixed(2)}',
                   style: TextStyle(
                     color: theme.colorScheme.onPrimary,
                     fontSize: 36,
@@ -216,7 +216,7 @@ class _ExpensesScreenState extends State<ExpensesScreen>
                     ),
                     _buildSummaryItem(
                       'Per Person',
-                      '\$${perPersonShare.toStringAsFixed(2)}',
+                      'Rs ${perPersonShare.toStringAsFixed(2)}',
                       Icons.person,
                       theme.colorScheme.onPrimary,
                     ),
@@ -328,7 +328,7 @@ class _ExpensesScreenState extends State<ExpensesScreen>
                         Text(
                           isZero
                               ? 'Settled up'
-                              : '${isPositive ? '+' : ''}\$${balance.toStringAsFixed(2)}',
+                              : '${isPositive ? '+' : ''}Rs ${balance.toStringAsFixed(2)}',
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
@@ -464,7 +464,7 @@ class _ExpensesScreenState extends State<ExpensesScreen>
                 ],
               ),
               trailing: Text(
-                '\$${amount.toStringAsFixed(2)}',
+                'Rs ${amount.toStringAsFixed(2)}',
                 style: theme.textTheme.titleMedium?.copyWith(
                   color: theme.colorScheme.primary,
                   fontWeight: FontWeight.bold,
@@ -555,7 +555,7 @@ class _ExpensesScreenState extends State<ExpensesScreen>
                             ),
                           ),
                           child: Text(
-                            '$displayName (\$${amount.toStringAsFixed(2)})',
+                            '$displayName (Rs ${amount.toStringAsFixed(2)})',
                             style: TextStyle(
                               fontSize: 12,
                               color: Colors.green.shade700,
@@ -609,7 +609,7 @@ class _ExpensesScreenState extends State<ExpensesScreen>
                             ),
                           ),
                           child: Text(
-                            '$displayName (\$${amount.toStringAsFixed(2)})',
+                            '$displayName (Rs ${amount.toStringAsFixed(2)})',
                             style: TextStyle(
                               fontSize: 12,
                               color: Colors.orange.shade700,
@@ -730,7 +730,7 @@ class _ExpensesScreenState extends State<ExpensesScreen>
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      '\$${amountOwed.toStringAsFixed(2)}',
+                      'Rs ${amountOwed.toStringAsFixed(2)}',
                       style: theme.textTheme.titleMedium?.copyWith(
                         color: theme.colorScheme.primary,
                         fontWeight: FontWeight.bold,
@@ -1159,7 +1159,7 @@ class _ExpensesScreenState extends State<ExpensesScreen>
                                     ),
                                   ),
                                   Text(
-                                    'Amount owed: \$${amount.toStringAsFixed(2)}',
+                                    'Amount owed: Rs ${amount.toStringAsFixed(2)}',
                                     style: theme.textTheme.bodySmall?.copyWith(
                                       color: theme.colorScheme.onSurfaceVariant,
                                     ),

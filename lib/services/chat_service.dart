@@ -630,7 +630,6 @@ class ChatService {
           groupsWithDetails.add({
             ...group,
             'last_message': lastMessageWithSender,
-            'member_count': members.length,
             'member_names': memberNames,
           });
         } catch (e) {
@@ -728,7 +727,8 @@ class ChatService {
       // Send an expense message to the group with expense data
       await sendGroupMessage(
         groupId: groupId,
-        content: '💰 New expense: $title - \$${totalAmount.toStringAsFixed(2)}',
+        content:
+            '💰 New expense: $title - Rs ${totalAmount.toStringAsFixed(2)}',
         category: 'expense',
         expenseData: combinedExpenseData,
       );
@@ -978,7 +978,7 @@ class ChatService {
       await sendGroupMessage(
         groupId: expenseShare['expenses']['group_id'],
         content:
-            '✅ ${currentUserProfile['display_name']} paid \$${expenseShare['amount_owed'].toStringAsFixed(2)} for ${expenseShare['expenses']['title']}',
+            '✅ ${currentUserProfile['display_name']} paid Rs ${expenseShare['amount_owed'].toStringAsFixed(2)} for ${expenseShare['expenses']['title']}',
         category: 'payment',
         paymentData: paymentData,
       );
@@ -1326,7 +1326,7 @@ class ChatService {
         await sendGroupMessage(
           groupId: groupId,
           content:
-              '✅ $memberName paid \$${share['amount_owed'].toStringAsFixed(2)} for ${expense['title']}',
+              '✅ $memberName paid Rs ${share['amount_owed'].toStringAsFixed(2)} for ${expense['title']}',
           category: 'payment',
           paymentData: paymentData,
         );

@@ -247,7 +247,7 @@ class _ExpenseDetailsModalState extends State<ExpenseDetailsModal>
                 ),
               ),
               child: Text(
-                '\$${amount.toStringAsFixed(2)}',
+                'Rs ${amount.toStringAsFixed(2)}',
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 18,
@@ -592,7 +592,7 @@ class _ExpenseDetailsModalState extends State<ExpenseDetailsModal>
                         ),
                         const SizedBox(width: 6),
                         Text(
-                          '(\$${amount.toStringAsFixed(2)})',
+                          '(Rs ${amount.toStringAsFixed(2)})',
                           style: TextStyle(
                             fontSize: 12,
                             color: color.withValues(alpha: 0.8),

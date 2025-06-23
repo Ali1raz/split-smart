@@ -148,7 +148,7 @@ class _AllCreatedExpensesScreenState extends State<AllCreatedExpensesScreen> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'Total: \$${totalAmount.toStringAsFixed(2)}',
+                            'Total: Rs ${totalAmount.toStringAsFixed(2)}',
                             style: theme.textTheme.bodySmall?.copyWith(
                               color: theme.colorScheme.secondary,
                               fontWeight: FontWeight.w500,
@@ -157,7 +157,7 @@ class _AllCreatedExpensesScreenState extends State<AllCreatedExpensesScreen> {
                         ],
                       ),
                       trailing: Text(
-                        '\$${totalAmount.toStringAsFixed(2)}',
+                        'Rs ${totalAmount.toStringAsFixed(2)}',
                         style: theme.textTheme.bodyMedium?.copyWith(
                           fontWeight: FontWeight.bold,
                           color: theme.colorScheme.secondary,

@@ -234,7 +234,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                       decoration: const InputDecoration(
                         labelText: 'Total Amount',
                         hintText: '0.00',
-                        prefixText: '\$',
+                        prefixText: 'Rs ',
                         border: OutlineInputBorder(),
                       ),
                       keyboardType: TextInputType.number,
