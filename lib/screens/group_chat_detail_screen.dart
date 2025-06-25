@@ -191,7 +191,16 @@ class _GroupChatDetailScreenState extends State<GroupChatDetailScreen> {
   }
 
   List<Map<String, dynamic>> _getFilteredMessages() {
-    final filteredForLocalDeletion = _currentMessages.where(
+    final currentUserId = Supabase.instance.client.auth.currentUser!.id;
+
+    // Filter out messages deleted for current user at database level
+    final filteredForDatabaseDeletion = _currentMessages.where((msg) {
+      final deletedForUsers = List<String>.from(msg['deleted_for_users'] ?? []);
+      return !deletedForUsers.contains(currentUserId);
+    });
+
+    // Filter out locally deleted messages (for UI consistency)
+    final filteredForLocalDeletion = filteredForDatabaseDeletion.where(
       (msg) => !_locallyDeletedMessageIds.contains(msg['id']),
     );
 
@@ -362,26 +371,29 @@ class _GroupChatDetailScreenState extends State<GroupChatDetailScreen> {
 
     if (deleteOption == null) return;
 
-    if (deleteOption == 'everyone') {
-      try {
+    try {
+      if (deleteOption == 'everyone') {
+        // Delete for everyone - this will show "This message was deleted" for all users
         await Future.wait(
           _selectedMessageIds.map(
-            (id) => _chatService.softDeleteGroupMessage(id),
+            (id) => _chatService.deleteGroupMessageForEveryone(id),
           ),
         );
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error deleting messages: $e')),
-          );
-        }
-      } finally {
-        _clearSelection();
+      } else if (deleteOption == 'me') {
+        // Delete for me - this will hide the message from current user only
+        await Future.wait(
+          _selectedMessageIds.map(
+            (id) => _chatService.deleteGroupMessageForMe(id),
+          ),
+        );
       }
-    } else if (deleteOption == 'me') {
-      setState(() {
-        _locallyDeletedMessageIds.addAll(_selectedMessageIds);
-      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error deleting messages: $e')));
+      }
+    } finally {
       _clearSelection();
     }
   }

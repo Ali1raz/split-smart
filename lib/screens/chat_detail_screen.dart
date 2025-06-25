@@ -26,44 +26,61 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   bool _isLoading = true;
   final List<String> _selectedMessageIds = [];
   final Set<String> _locallyDeletedMessageIds = {};
-  Timer? _pollingTimer;
+  StreamSubscription? _messagesSubscription;
 
   @override
   void initState() {
     super.initState();
     _loadMessages();
     _markMessagesAsRead();
-    // Start polling every 2 seconds
-    _pollingTimer = Timer.periodic(const Duration(seconds: 2), (_) {
-      _loadMessages();
-    });
+    _setupRealtimeSubscription();
   }
 
   @override
   void dispose() {
     _messageController.dispose();
     _scrollController.dispose();
-    _pollingTimer?.cancel();
+    _messagesSubscription?.cancel();
     super.dispose();
+  }
+
+  void _setupRealtimeSubscription() {
+    // Listen for real-time message updates
+    _messagesSubscription = _chatService
+        .subscribeToMessages(widget.otherUserId)
+        .listen((messages) {
+          if (mounted) {
+            setState(() {
+              _messages = messages;
+              _isLoading = false;
+            });
+            // Scroll to bottom after messages load
+            if (_scrollController.hasClients) {
+              _scrollController.animateTo(
+                0,
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeOut,
+              );
+            }
+          }
+        }, onError: (error) {});
   }
 
   Future<void> _loadMessages() async {
     try {
       final messages = await _chatService.getChatHistory(widget.otherUserId);
-      setState(() {
-        _messages = messages;
-        _isLoading = false;
-      });
-      // Scroll to bottom after messages load
-      if (_scrollController.hasClients) {
-        _scrollController.animateTo(
-          0,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
+      if (mounted) {
+        setState(() {
+          _messages = messages;
+          _isLoading = false;
+        });
       }
     } catch (e) {
-      // Handle error silently
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -84,7 +101,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         content: _messageController.text.trim(),
       );
       _messageController.clear();
-      _loadMessages();
+      // Real-time stream will handle the update automatically
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
@@ -97,10 +114,18 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   // Group messages by day
   List<Map<String, dynamic>> _getGroupedMessages() {
     final groupedMessages = <Map<String, dynamic>>[];
+    final currentUserId = Supabase.instance.client.auth.currentUser!.id;
 
     DateTime? currentDay;
 
-    final filteredForLocalDeletion = _messages.where(
+    // Filter out messages deleted for current user at database level
+    final filteredForDatabaseDeletion = _messages.where((msg) {
+      final deletedForUsers = List<String>.from(msg['deleted_for_users'] ?? []);
+      return !deletedForUsers.contains(currentUserId);
+    });
+
+    // Filter out locally deleted messages (for UI consistency)
+    final filteredForLocalDeletion = filteredForDatabaseDeletion.where(
       (msg) => !_locallyDeletedMessageIds.contains(msg['id']),
     );
 
@@ -206,26 +231,27 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
 
     if (deleteOption == null) return;
 
-    if (deleteOption == 'everyone') {
-      try {
+    try {
+      if (deleteOption == 'everyone') {
+        // Delete for everyone - this will show "This message was deleted" for all users
         await Future.wait(
           _selectedMessageIds.map(
-            (id) => _chatService.softDeleteDirectMessage(id),
+            (id) => _chatService.deleteMessageForEveryone(id),
           ),
         );
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error deleting messages: $e')),
-          );
-        }
-      } finally {
-        _clearSelection();
+      } else if (deleteOption == 'me') {
+        // Delete for me - this will hide the message from current user only
+        await Future.wait(
+          _selectedMessageIds.map((id) => _chatService.deleteMessageForMe(id)),
+        );
       }
-    } else if (deleteOption == 'me') {
-      setState(() {
-        _locallyDeletedMessageIds.addAll(_selectedMessageIds);
-      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error deleting messages: $e')));
+      }
+    } finally {
       _clearSelection();
     }
   }

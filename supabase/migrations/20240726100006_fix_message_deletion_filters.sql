@@ -1,3 +1,6 @@
+-- Fix message deletion filters to properly handle deleted_for_users array
+
+-- Update the function to filter out messages deleted for the current user
 DROP FUNCTION IF EXISTS get_user_chats_with_last_message(uuid);
 
 create or replace function get_user_chats_with_last_message(current_user_id uuid)
@@ -32,6 +35,7 @@ begin
         from messages
         where (sender_id = current_user_id or receiver_id = current_user_id)
         and (is_deleted is null or is_deleted = false)
+        and not (deleted_for_users @> array[current_user_id::text])
     )
     select
         p.id,

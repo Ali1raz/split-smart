@@ -28,6 +28,8 @@ class _ChatListScreenState extends State<ChatListScreen>
   bool _isLoading = true;
   late TabController _tabController;
   StreamSubscription? _groupMessagesSubscription;
+  StreamSubscription? _directMessagesSubscription;
+  Timer? _debounceTimer;
 
   @override
   void initState() {
@@ -37,7 +39,7 @@ class _ChatListScreenState extends State<ChatListScreen>
     _tabController.addListener(_onTabChanged);
     _checkEmailVerification();
     _loadData();
-    _setupRealtimeSubscription();
+    _setupRealtimeSubscriptions();
   }
 
   @override
@@ -46,33 +48,45 @@ class _ChatListScreenState extends State<ChatListScreen>
     _tabController.removeListener(_onTabChanged);
     _tabController.dispose();
     _groupMessagesSubscription?.cancel();
+    _directMessagesSubscription?.cancel();
+    _debounceTimer?.cancel();
     super.dispose();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
-    // Refresh groups when app becomes active (user returns to app)
+    // Only refresh when app becomes active to ensure data is current
     if (state == AppLifecycleState.resumed && mounted) {
-      _refreshGroupsOnly();
+      _loadData();
     }
   }
 
-  // Refresh groups when tab changes to groups tab
+  // No manual refresh on tab changes - rely on real-time streams
   void _onTabChanged() {
-    if (_tabController.index == 1) {
-      // Groups tab
-      _refreshGroupsOnly();
-    }
+    // Real-time streams handle updates automatically
   }
 
-  void _setupRealtimeSubscription() {
+  void _setupRealtimeSubscriptions() {
     // Listen for new group messages and update the group list automatically
     _groupMessagesSubscription = _chatService.getGroupMessagesStream().listen(
       (_) {
-        // When a new message is detected, refresh the groups list
+        // When a new message is detected, refresh the groups list with debouncing
         if (mounted) {
-          _refreshGroupsOnly();
+          _debounceRefresh(() => _refreshGroupsOnly());
+        }
+      },
+      onError: (error) {
+        // Handle error silently
+      },
+    );
+
+    // Listen for new direct messages and update the users list automatically
+    _directMessagesSubscription = _chatService.getDirectMessagesStream().listen(
+      (_) {
+        // When a new message is detected, refresh the users list immediately
+        if (mounted) {
+          _refreshUsersOnly();
         }
       },
       onError: (error) {
@@ -122,6 +136,19 @@ class _ChatListScreenState extends State<ChatListScreen>
     }
   }
 
+  Future<void> _refreshUsersOnly() async {
+    try {
+      final users = await _chatService.getUsersWithLastMessage();
+      if (mounted) {
+        setState(() {
+          _users = users;
+        });
+      }
+    } catch (e) {
+      // Handle error silently
+    }
+  }
+
   Future<void> _checkEmailVerification() async {
     // Check if user's email is verified
     final isVerified = await _authService.isCurrentUserEmailVerified();
@@ -137,6 +164,12 @@ class _ChatListScreenState extends State<ChatListScreen>
         ),
       );
     }
+  }
+
+  // Debounce refresh calls to prevent too many rapid updates
+  void _debounceRefresh(VoidCallback refreshCallback) {
+    _debounceTimer?.cancel();
+    _debounceTimer = Timer(const Duration(milliseconds: 100), refreshCallback);
   }
 
   @override
@@ -327,8 +360,8 @@ class _ChatListScreenState extends State<ChatListScreen>
                       ),
                     )
                     : null,
-            onTap: () {
-              Navigator.push(
+            onTap: () async {
+              await Navigator.push(
                 context,
                 MaterialPageRoute(
                   builder:
@@ -338,6 +371,10 @@ class _ChatListScreenState extends State<ChatListScreen>
                       ),
                 ),
               );
+              // Refresh data when returning from chat to show latest messages
+              if (mounted) {
+                _refreshUsersOnly();
+              }
             },
           );
         },
@@ -420,8 +457,7 @@ class _ChatListScreenState extends State<ChatListScreen>
                       ),
                 ),
               );
-              // Refresh groups list when returning from group chat
-              // This ensures updated group names are reflected
+              // Refresh data when returning from chat to show latest messages
               if (mounted) {
                 _refreshGroupsOnly();
               }

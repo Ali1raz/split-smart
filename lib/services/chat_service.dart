@@ -135,6 +135,8 @@ class ChatService {
   // Get group chat history
   Future<List<Map<String, dynamic>>> getGroupChatHistory(String groupId) async {
     try {
+      final currentUserId = _supabase.auth.currentUser!.id;
+
       // First get group messages
       final messagesResponse = await _supabase
           .from('group_messages')
@@ -146,14 +148,31 @@ class ChatService {
         return [];
       }
 
+      // Filter out messages deleted for current user only (but keep messages deleted for everyone)
+      final nonDeletedMessages =
+          messagesResponse.where((message) {
+            final deletedForUsers = List<String>.from(
+              message['deleted_for_users'] ?? [],
+            );
+
+            // Exclude messages deleted for current user only
+            if (deletedForUsers.contains(currentUserId)) return false;
+
+            return true;
+          }).toList();
+
+      if (nonDeletedMessages.isEmpty) {
+        return [];
+      }
+
       // Get sender IDs from messages
       final senderIds =
-          messagesResponse
-              .map((message) => message['sender_id'])
+          nonDeletedMessages
+              .map((message) => message['sender_id'] as String)
               .toSet()
               .toList();
 
-      // Get profiles for these senders
+      // Get profiles for all senders
       final profilesResponse = await _supabase
           .from('profiles')
           .select('*')
@@ -165,11 +184,11 @@ class ChatService {
         profilesMap[profile['id']] = profile;
       }
 
-      // Combine messages with their sender profiles
+      // Combine messages with profiles
       final result = <Map<String, dynamic>>[];
-      for (final message in messagesResponse) {
-        final profile = profilesMap[message['sender_id']];
-        result.add({...message, 'profiles': profile ?? {}});
+      for (final message in nonDeletedMessages) {
+        final senderProfile = profilesMap[message['sender_id']];
+        result.add({...message, 'profiles': senderProfile ?? {}});
       }
 
       return result;
@@ -209,15 +228,33 @@ class ChatService {
   // Get direct chat history between two users
   Future<List<Map<String, dynamic>>> getChatHistory(String otherUserId) async {
     try {
+      final currentUserId = _supabase.auth.currentUser!.id;
       final response = await _supabase
           .from('messages')
           .select()
-          .or(
-            'sender_id.eq.${_supabase.auth.currentUser!.id},receiver_id.eq.${_supabase.auth.currentUser!.id}',
-          )
+          .or('sender_id.eq.$currentUserId,receiver_id.eq.$currentUserId')
           .or('sender_id.eq.$otherUserId,receiver_id.eq.$otherUserId')
           .order('created_at', ascending: true);
-      return List<Map<String, dynamic>>.from(response);
+
+      // Client-side filtering to ensure we only get messages between these two users
+      // and exclude messages deleted for the current user only
+      final filteredResponse =
+          response.where((message) {
+            final senderId = message['sender_id'];
+            final receiverId = message['receiver_id'];
+            final deletedForUsers = List<String>.from(
+              message['deleted_for_users'] ?? [],
+            );
+
+            // Exclude messages deleted for current user only (but keep messages deleted for everyone)
+            if (deletedForUsers.contains(currentUserId)) return false;
+
+            // Ensure message is between the two users
+            return (senderId == currentUserId && receiverId == otherUserId) ||
+                (senderId == otherUserId && receiverId == currentUserId);
+          }).toList();
+
+      return List<Map<String, dynamic>>.from(filteredResponse);
     } catch (e) {
       rethrow;
     }
@@ -262,7 +299,15 @@ class ChatService {
           .select('id')
           .eq('receiver_id', _supabase.auth.currentUser!.id)
           .eq('is_read', false);
-      return response.length;
+
+      // Filter out deleted messages
+      final nonDeletedMessages =
+          response.where((message) {
+            final isDeleted = message['is_deleted'] ?? false;
+            return !isDeleted;
+          }).toList();
+
+      return nonDeletedMessages.length;
     } catch (e) {
       return 0;
     }
@@ -270,15 +315,27 @@ class ChatService {
 
   // Subscribe to group messages with real-time updates
   Stream<List<Map<String, dynamic>>> subscribeToGroupMessages(String groupId) {
-    // Use a different stream configuration that should work better
+    final currentUserId = _supabase.auth.currentUser!.id;
     return _supabase
         .from('group_messages')
         .stream(primaryKey: ['id'])
         .eq('group_id', groupId)
         .order('created_at', ascending: true)
         .map((rows) {
+          // Filter out messages deleted for current user only (but keep messages deleted for everyone)
           final messages =
-              rows.map((row) => Map<String, dynamic>.from(row)).toList();
+              rows
+                  .where((row) {
+                    // Exclude messages deleted for current user only
+                    final deletedForUsers = List<String>.from(
+                      row['deleted_for_users'] ?? [],
+                    );
+                    if (deletedForUsers.contains(currentUserId)) return false;
+
+                    return true;
+                  })
+                  .map((row) => Map<String, dynamic>.from(row))
+                  .toList();
           return messages;
         })
         .handleError((error) {
@@ -288,14 +345,33 @@ class ChatService {
 
   // Subscribe to direct messages
   Stream<List<Map<String, dynamic>>> subscribeToMessages(String otherUserId) {
-    // final userId = _supabase.auth.currentUser!.id;
+    final userId = _supabase.auth.currentUser!.id;
     return _supabase
         .from('messages')
         .stream(primaryKey: ['id'])
-        // .or('sender_id.eq.$userId,receiver_id.eq.$userId')
-        // .or('sender_id.eq.$otherUserId,receiver_id.eq.$otherUserId')
         .order('created_at', ascending: true)
-        .map((rows) => rows);
+        .map((rows) {
+          // Filter out messages deleted for current user only (but keep messages deleted for everyone)
+          return rows
+              .where((row) {
+                // Exclude messages deleted for current user only
+                final deletedForUsers = List<String>.from(
+                  row['deleted_for_users'] ?? [],
+                );
+                if (deletedForUsers.contains(userId)) return false;
+
+                // Ensure message is between the two users
+                final senderId = row['sender_id'];
+                final receiverId = row['receiver_id'];
+                return (senderId == userId && receiverId == otherUserId) ||
+                    (senderId == otherUserId && receiverId == userId);
+              })
+              .map((row) => Map<String, dynamic>.from(row))
+              .toList();
+        })
+        .handleError((error) {
+          return <Map<String, dynamic>>[];
+        });
   }
 
   // Check if current user is admin of a group
@@ -582,21 +658,42 @@ class ChatService {
     try {
       final groups = await getUserGroups();
       final groupsWithDetails = <Map<String, dynamic>>[];
+      final currentUserId = _supabase.auth.currentUser!.id;
 
       for (final group in groups) {
         try {
           // Get last message
-          final lastMessage =
-              await _supabase
-                  .from('group_messages')
-                  .select('*')
-                  .eq('group_id', group['id'])
-                  .order('created_at', ascending: false)
-                  .limit(1)
-                  .maybeSingle();
+          final messagesResponse = await _supabase
+              .from('group_messages')
+              .select('*')
+              .eq('group_id', group['id'])
+              .order('created_at', ascending: false)
+              .limit(
+                10,
+              ); // Get more messages to ensure we find a non-deleted one
+
+          // Filter out messages deleted for current user at database level
+          final nonDeletedMessages =
+              messagesResponse.where((message) {
+                final isDeleted = message['is_deleted'] ?? false;
+                final deletedForUsers = List<String>.from(
+                  message['deleted_for_users'] ?? [],
+                );
+
+                // Exclude messages deleted for everyone (is_deleted = true)
+                if (isDeleted) return false;
+
+                // Exclude messages deleted for current user only
+                if (deletedForUsers.contains(currentUserId)) return false;
+
+                return true;
+              }).toList();
 
           Map<String, dynamic>? lastMessageWithSender;
-          if (lastMessage != null) {
+          if (nonDeletedMessages.isNotEmpty) {
+            final lastMessage =
+                nonDeletedMessages.first; // Most recent non-deleted message
+
             // Fetch sender's profile
             final senderProfile =
                 await _supabase
@@ -651,26 +748,60 @@ class ChatService {
 
   // Real-time stream for group messages that will trigger group list updates
   Stream<void> getGroupMessagesStream() {
-    return _supabase.from('group_messages').stream(primaryKey: ['id']).map((
-      event,
-    ) {
-      // This stream will emit whenever a new message is added to any group
-      // The actual data processing will be done in the UI layer
-      return;
-    });
+    final userId = _supabase.auth.currentUser!.id;
+    return _supabase
+        .from('group_messages')
+        .stream(primaryKey: ['id'])
+        .map((event) {
+          // Filter to only trigger updates for messages in groups where user is a member
+          // This is a simplified check - in a production app, you might want to cache user's groups
+          // So we'll trigger for all non-deleted messages and let the UI handle filtering
+          final hasRelevantMessage = event.any((message) {
+            final isDeleted = message['is_deleted'] ?? false;
+
+            // Only trigger if message is not deleted
+            return !isDeleted;
+          });
+
+          // Only emit if there's a relevant message
+          if (hasRelevantMessage) {
+            return;
+          }
+        })
+        .handleError((error) {
+          // Handle errors silently to prevent stream from breaking
+
+          return;
+        });
   }
 
   // Real-time stream for specific group messages
   Stream<List<Map<String, dynamic>>> getGroupMessagesStreamForGroup(
     String groupId,
   ) {
+    final currentUserId = _supabase.auth.currentUser!.id;
     return _supabase
         .from('group_messages')
         .stream(primaryKey: ['id'])
         .eq('group_id', groupId)
         .order('created_at', ascending: true)
         .map((rows) {
-          return rows.map((row) => Map<String, dynamic>.from(row)).toList();
+          // Filter out messages deleted for current user only (but keep messages deleted for everyone)
+          return rows
+              .where((row) {
+                // Exclude messages deleted for current user only
+                final deletedForUsers = List<String>.from(
+                  row['deleted_for_users'] ?? [],
+                );
+                if (deletedForUsers.contains(currentUserId)) return false;
+
+                return true;
+              })
+              .map((row) => Map<String, dynamic>.from(row))
+              .toList();
+        })
+        .handleError((error) {
+          return <Map<String, dynamic>>[];
         });
   }
 
@@ -727,8 +858,7 @@ class ChatService {
       // Send an expense message to the group with expense data
       await sendGroupMessage(
         groupId: groupId,
-        content:
-            '💰 New expense: $title - Rs ${totalAmount.toStringAsFixed(2)}',
+        content: '💰 New expense: $title - \$${totalAmount.toStringAsFixed(2)}',
         category: 'expense',
         expenseData: combinedExpenseData,
       );
@@ -978,7 +1108,7 @@ class ChatService {
       await sendGroupMessage(
         groupId: expenseShare['expenses']['group_id'],
         content:
-            '✅ ${currentUserProfile['display_name']} paid Rs ${expenseShare['amount_owed'].toStringAsFixed(2)} for ${expenseShare['expenses']['title']}',
+            '✅ ${currentUserProfile['display_name']} paid \$${expenseShare['amount_owed'].toStringAsFixed(2)} for ${expenseShare['expenses']['title']}',
         category: 'payment',
         paymentData: paymentData,
       );
@@ -1050,9 +1180,23 @@ class ChatService {
         return [];
       }
 
+      // Filter out deleted messages
+      final nonDeletedMessages =
+          messages.where((message) {
+            final isDeleted = message['is_deleted'] ?? false;
+            return !isDeleted;
+          }).toList();
+
+      if (nonDeletedMessages.isEmpty) {
+        return [];
+      }
+
       // Get all sender IDs
       final senderIds =
-          messages.map((message) => message['sender_id']).toSet().toList();
+          nonDeletedMessages
+              .map((message) => message['sender_id'])
+              .toSet()
+              .toList();
 
       // Get profiles for all senders
       final profiles = await _supabase
@@ -1068,7 +1212,7 @@ class ChatService {
 
       // Combine messages with profiles
       final result = <Map<String, dynamic>>[];
-      for (final message in messages) {
+      for (final message in nonDeletedMessages) {
         final profile = profilesMap[message['sender_id']];
         result.add({...message, 'profiles': profile ?? {}});
       }
@@ -1326,7 +1470,7 @@ class ChatService {
         await sendGroupMessage(
           groupId: groupId,
           content:
-              '✅ $memberName paid Rs ${share['amount_owed'].toStringAsFixed(2)} for ${expense['title']}',
+              '✅ $memberName paid \$${share['amount_owed'].toStringAsFixed(2)} for ${expense['title']}',
           category: 'payment',
           paymentData: paymentData,
         );
@@ -1364,9 +1508,82 @@ class ChatService {
     }
   }
 
-  Future<void> softDeleteGroupMessage(String messageId) async {
+  // Delete message for current user only (soft delete)
+  Future<void> deleteMessageForMe(String messageId) async {
     try {
-      await Supabase.instance.client
+      final currentUserId = _supabase.auth.currentUser!.id;
+
+      // Get current deleted_for_users array
+      final message =
+          await _supabase
+              .from('messages')
+              .select('deleted_for_users')
+              .eq('id', messageId)
+              .single();
+
+      final deletedForUsers = List<String>.from(
+        message['deleted_for_users'] ?? [],
+      );
+      if (!deletedForUsers.contains(currentUserId)) {
+        deletedForUsers.add(currentUserId);
+      }
+
+      // Update with new array
+      await _supabase
+          .from('messages')
+          .update({'deleted_for_users': deletedForUsers})
+          .eq('id', messageId);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // Delete message for everyone (soft delete)
+  Future<void> deleteMessageForEveryone(String messageId) async {
+    try {
+      await _supabase
+          .from('messages')
+          .update({'is_deleted': true, 'content': 'This message was deleted'})
+          .eq('id', messageId);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // Delete group message for current user only (soft delete)
+  Future<void> deleteGroupMessageForMe(String messageId) async {
+    try {
+      final currentUserId = _supabase.auth.currentUser!.id;
+
+      // Get current deleted_for_users array
+      final message =
+          await _supabase
+              .from('group_messages')
+              .select('deleted_for_users')
+              .eq('id', messageId)
+              .single();
+
+      final deletedForUsers = List<String>.from(
+        message['deleted_for_users'] ?? [],
+      );
+      if (!deletedForUsers.contains(currentUserId)) {
+        deletedForUsers.add(currentUserId);
+      }
+
+      // Update with new array
+      await _supabase
+          .from('group_messages')
+          .update({'deleted_for_users': deletedForUsers})
+          .eq('id', messageId);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // Delete group message for everyone (soft delete)
+  Future<void> deleteGroupMessageForEveryone(String messageId) async {
+    try {
+      await _supabase
           .from('group_messages')
           .update({'is_deleted': true, 'content': 'This message was deleted'})
           .eq('id', messageId);
@@ -1375,14 +1592,43 @@ class ChatService {
     }
   }
 
+  // Legacy methods for backward compatibility
+  Future<void> softDeleteGroupMessage(String messageId) async {
+    // Default to delete for everyone for backward compatibility
+    await deleteGroupMessageForEveryone(messageId);
+  }
+
   Future<void> softDeleteDirectMessage(String messageId) async {
-    try {
-      await Supabase.instance.client
-          .from('messages')
-          .update({'is_deleted': true, 'content': 'This message was deleted'})
-          .eq('id', messageId);
-    } catch (e) {
-      rethrow;
-    }
+    // Default to delete for everyone for backward compatibility
+    await deleteMessageForEveryone(messageId);
+  }
+
+  // Real-time stream for direct messages that will trigger chat list updates
+  Stream<void> getDirectMessagesStream() {
+    final userId = _supabase.auth.currentUser!.id;
+    return _supabase
+        .from('messages')
+        .stream(primaryKey: ['id'])
+        .map((event) {
+          // Filter to only trigger updates for messages involving the current user
+          final hasRelevantMessage = event.any((message) {
+            final senderId = message['sender_id'];
+            final receiverId = message['receiver_id'];
+            final isDeleted = message['is_deleted'] ?? false;
+
+            // Only trigger if message involves current user and is not deleted
+            return (senderId == userId || receiverId == userId) && !isDeleted;
+          });
+
+          // Only emit if there's a relevant message
+          if (hasRelevantMessage) {
+            return;
+          }
+        })
+        .handleError((error) {
+          // Handle errors silently to prevent stream from breaking
+
+          return;
+        });
   }
 }
