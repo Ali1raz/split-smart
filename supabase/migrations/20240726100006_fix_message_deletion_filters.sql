@@ -35,7 +35,7 @@ begin
         from messages
         where (sender_id = current_user_id or receiver_id = current_user_id)
         and (is_deleted is null or is_deleted = false)
-        and not (deleted_for_users @> array[current_user_id::text])
+        and not (deleted_for_users @> array[current_user_id]::uuid[])
     )
     select
         p.id,

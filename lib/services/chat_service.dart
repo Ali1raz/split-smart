@@ -858,7 +858,8 @@ class ChatService {
       // Send an expense message to the group with expense data
       await sendGroupMessage(
         groupId: groupId,
-        content: '💰 New expense: $title - \$${totalAmount.toStringAsFixed(2)}',
+        content:
+            '💰 New expense: $title - Rs ${totalAmount.toStringAsFixed(2)}',
         category: 'expense',
         expenseData: combinedExpenseData,
       );
@@ -1108,7 +1109,7 @@ class ChatService {
       await sendGroupMessage(
         groupId: expenseShare['expenses']['group_id'],
         content:
-            '✅ ${currentUserProfile['display_name']} paid \$${expenseShare['amount_owed'].toStringAsFixed(2)} for ${expenseShare['expenses']['title']}',
+            '✅ ${currentUserProfile['display_name']} paid Rs ${expenseShare['amount_owed'].toStringAsFixed(2)} for ${expenseShare['expenses']['title']}',
         category: 'payment',
         paymentData: paymentData,
       );
@@ -1470,7 +1471,7 @@ class ChatService {
         await sendGroupMessage(
           groupId: groupId,
           content:
-              '✅ $memberName paid \$${share['amount_owed'].toStringAsFixed(2)} for ${expense['title']}',
+              '✅ $memberName paid Rs ${share['amount_owed'].toStringAsFixed(2)} for ${expense['title']}',
           category: 'payment',
           paymentData: paymentData,
         );
@@ -1612,8 +1613,8 @@ class ChatService {
         .map((event) {
           // Filter to only trigger updates for messages involving the current user
           final hasRelevantMessage = event.any((message) {
-            final senderId = message['sender_id'];
-            final receiverId = message['receiver_id'];
+            final senderId = message['sender_id'] as String;
+            final receiverId = message['receiver_id'] as String;
             final isDeleted = message['is_deleted'] ?? false;
 
             // Only trigger if message involves current user and is not deleted
