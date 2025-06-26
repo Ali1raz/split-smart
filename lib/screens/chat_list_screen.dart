@@ -11,6 +11,8 @@ import 'all_expenses_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:async';
 import 'verify_email_screen.dart';
+import 'group_management_screen.dart';
+import '../widgets/edit_group_name_dialog.dart';
 
 class ChatListScreen extends StatefulWidget {
   const ChatListScreen({super.key});
@@ -461,6 +463,147 @@ class _ChatListScreenState extends State<ChatListScreen>
               if (mounted) {
                 _refreshGroupsOnly();
               }
+            },
+            onLongPress: () async {
+              final isAdmin = await _chatService.isGroupAdmin(group['id']);
+              showModalBottomSheet(
+                context: context,
+                shape: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+                ),
+                builder: (context) {
+                  return SafeArea(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        ListTile(
+                          leading: const Icon(Icons.info_outline),
+                          title: const Text('View Group Details'),
+                          onTap: () async {
+                            Navigator.pop(context);
+                            await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder:
+                                    (context) => GroupManagementScreen(
+                                      groupId: group['id'],
+                                      groupName:
+                                          group['name'] ?? 'Unknown Group',
+                                    ),
+                              ),
+                            );
+                            if (mounted) _refreshGroupsOnly();
+                          },
+                        ),
+                        if (isAdmin) ...[
+                          ListTile(
+                            leading: const Icon(Icons.edit),
+                            title: const Text('Edit Group'),
+                            onTap: () async {
+                              Navigator.pop(context);
+                              final newName = await showDialog<String>(
+                                context: context,
+                                builder:
+                                    (context) => EditGroupNameDialog(
+                                      initialName:
+                                          group['name'] ?? 'Unknown Group',
+                                    ),
+                              );
+                              if (newName != null &&
+                                  newName.isNotEmpty &&
+                                  newName != group['name']) {
+                                try {
+                                  await _chatService.renameGroup(
+                                    groupId: group['id'],
+                                    newName: newName,
+                                  );
+                                  if (mounted) _refreshGroupsOnly();
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        'Group renamed successfully!',
+                                      ),
+                                      backgroundColor: Colors.green,
+                                    ),
+                                  );
+                                } catch (e) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('Error renaming group: $e'),
+                                      backgroundColor: Colors.red,
+                                    ),
+                                  );
+                                }
+                              }
+                            },
+                          ),
+                          ListTile(
+                            leading: const Icon(
+                              Icons.delete,
+                              color: Colors.red,
+                            ),
+                            title: const Text(
+                              'Delete Group',
+                              style: TextStyle(color: Colors.red),
+                            ),
+                            onTap: () async {
+                              Navigator.pop(context);
+                              final confirm = await showDialog<bool>(
+                                context: context,
+                                builder:
+                                    (context) => AlertDialog(
+                                      title: const Text('Delete Group?'),
+                                      content: const Text(
+                                        'Are you sure you want to delete this group and all its data? This cannot be undone.',
+                                      ),
+                                      actions: [
+                                        TextButton(
+                                          onPressed:
+                                              () =>
+                                                  Navigator.pop(context, false),
+                                          child: const Text('Cancel'),
+                                        ),
+                                        TextButton(
+                                          onPressed:
+                                              () =>
+                                                  Navigator.pop(context, true),
+                                          child: const Text(
+                                            'Delete',
+                                            style: TextStyle(color: Colors.red),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                              );
+                              if (confirm == true) {
+                                try {
+                                  await _chatService.deleteGroup(group['id']);
+                                  if (mounted) _refreshGroupsOnly();
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        'Group deleted successfully!',
+                                      ),
+                                      backgroundColor: Colors.green,
+                                    ),
+                                  );
+                                } catch (e) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('Error deleting group: $e'),
+                                      backgroundColor: Colors.red,
+                                    ),
+                                  );
+                                }
+                              }
+                            },
+                          ),
+                        ],
+                      ],
+                    ),
+                  );
+                },
+              );
             },
           );
         },

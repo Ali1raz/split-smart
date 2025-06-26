@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/chat_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../widgets/edit_group_name_dialog.dart';
 
 class GroupManagementScreen extends StatefulWidget {
   final String groupId;
@@ -24,6 +25,7 @@ class _GroupManagementScreenState extends State<GroupManagementScreen>
   bool _isLoading = true;
   bool _isAdmin = false;
   late TabController _tabController;
+  int _expensesCount = 0;
 
   @override
   void initState() {
@@ -49,12 +51,16 @@ class _GroupManagementScreenState extends State<GroupManagementScreen>
       final availableUsers = await _chatService.getAvailableUsersForGroup(
         widget.groupId,
       );
+      final expensesCount = await _chatService.getGroupExpensesCount(
+        widget.groupId,
+      );
 
       if (mounted) {
         setState(() {
           _members = members;
           _isAdmin = isAdmin;
           _availableUsers = availableUsers;
+          _expensesCount = expensesCount;
           _isLoading = false;
         });
       }
@@ -71,31 +77,9 @@ class _GroupManagementScreenState extends State<GroupManagementScreen>
   }
 
   Future<void> _renameGroup() async {
-    final textController = TextEditingController(text: widget.groupName);
     final newName = await showDialog<String>(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('Rename Group'),
-            content: TextField(
-              controller: textController,
-              decoration: const InputDecoration(
-                labelText: 'Group Name',
-                border: OutlineInputBorder(),
-              ),
-              autofocus: true,
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Cancel'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(textController.text),
-                child: const Text('Save'),
-              ),
-            ],
-          ),
+      builder: (context) => EditGroupNameDialog(initialName: widget.groupName),
     );
 
     if (newName != null && newName.trim().isNotEmpty) {
@@ -142,7 +126,6 @@ class _GroupManagementScreenState extends State<GroupManagementScreen>
                 const SizedBox(height: 8),
                 const Text('• All group messages'),
                 const Text('• All expenses and expense shares'),
-                const Text('• All member relationships'),
                 const Text('• The group itself'),
                 const SizedBox(height: 16),
                 const Text(
@@ -267,7 +250,8 @@ class _GroupManagementScreenState extends State<GroupManagementScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Manage ${widget.groupName}'),
+        title: Text(widget.groupName),
+        centerTitle: false,
         bottom:
             _isAdmin
                 ? TabBar(
@@ -282,68 +266,157 @@ class _GroupManagementScreenState extends State<GroupManagementScreen>
               onPressed: _renameGroup,
               tooltip: 'Rename Group',
             ),
-          if (_isAdmin)
-            IconButton(
-              icon: const Icon(Icons.delete),
-              onPressed: _deleteGroup,
-              tooltip: 'Delete Group',
-            ),
         ],
       ),
-      body:
-          _isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : _isAdmin
-              ? TabBarView(
-                controller: _tabController,
-                children: [_buildMembersList(), _buildAddMembersList()],
-              )
-              : _buildMembersList(),
+      body: Column(
+        children: [
+          Expanded(
+            child:
+                _isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : _isAdmin
+                    ? TabBarView(
+                      controller: _tabController,
+                      children: [_buildMembersList(), _buildAddMembersList()],
+                    )
+                    : _buildMembersList(),
+          ),
+          FutureBuilder<bool>(
+            future: _chatService.isGroupAdmin(widget.groupId),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return SizedBox.shrink();
+              }
+              if (snapshot.data == true) {
+                return SafeArea(
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    child: ElevatedButton.icon(
+                      icon: Icon(Icons.delete, color: Colors.red),
+                      label: Text(
+                        'Delete Group',
+                        style: TextStyle(color: Colors.red),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red.withValues(alpha: 0.2),
+                        foregroundColor: Colors.red,
+                        minimumSize: const Size.fromHeight(48),
+                        side: BorderSide(
+                          color: Colors.red.withValues(alpha: 0.2),
+                        ),
+                      ),
+                      onPressed: () async {
+                        await _deleteGroup();
+                      },
+                    ),
+                  ),
+                );
+              }
+              return SizedBox.shrink();
+            },
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildMembersList() {
-    return ListView.builder(
-      itemCount: _members.length,
-      itemBuilder: (context, index) {
-        final member = _members[index];
-        final profile = member['profiles'];
-        final isCurrentUser =
-            member['user_id'] == Supabase.instance.client.auth.currentUser!.id;
-        final isMemberAdmin = member['is_admin'] ?? false;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Row(
+            children: [
+              Text(
+                'Members',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+              ),
+              const Spacer(),
+              Chip(
+                label: Text('$_expensesCount Expenses'),
+                avatar: const Icon(Icons.receipt_long, size: 18),
+                backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                labelStyle: TextStyle(
+                  color: Theme.of(context).colorScheme.onPrimaryContainer,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const Divider(height: 1),
+        Expanded(
+          child: ListView.builder(
+            itemCount: _members.length,
+            itemBuilder: (context, index) {
+              final member = _members[index];
+              final profile = member['profiles'];
+              final isCurrentUser =
+                  member['user_id'] ==
+                  Supabase.instance.client.auth.currentUser!.id;
+              final isMemberAdmin = member['is_admin'] ?? false;
 
-        return ListTile(
-          leading: CircleAvatar(
-            backgroundImage:
-                profile['avatar_url'] != null
-                    ? NetworkImage(profile['avatar_url'])
-                    : null,
-            child:
-                profile['avatar_url'] == null
-                    ? Text(profile['display_name'][0].toUpperCase())
-                    : null,
+              return ListTile(
+                leading: CircleAvatar(
+                  backgroundImage:
+                      profile['avatar_url'] != null
+                          ? NetworkImage(profile['avatar_url'])
+                          : null,
+                  child:
+                      profile['avatar_url'] == null
+                          ? Text(profile['display_name'][0].toUpperCase())
+                          : null,
+                ),
+                title: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(profile['display_name'] ?? 'Unknown User'),
+                    if (isMemberAdmin) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.secondary,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          'Admin',
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.onSecondary,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                subtitle: Text(profile['username'] ?? ''),
+                trailing:
+                    _isAdmin && !isCurrentUser && !isMemberAdmin
+                        ? IconButton(
+                          icon: const Icon(
+                            Icons.remove_circle_outline,
+                            color: Colors.red,
+                          ),
+                          onPressed: () => _removeMember(member),
+                          tooltip: 'Remove member',
+                        )
+                        : null,
+              );
+            },
           ),
-          title: Text(profile['display_name'] ?? 'Unknown User'),
-          subtitle: Text(
-            isMemberAdmin ? 'Admin' : 'Member',
-            style: TextStyle(
-              color: isMemberAdmin ? Colors.blue : Colors.grey,
-              fontWeight: isMemberAdmin ? FontWeight.bold : FontWeight.normal,
-            ),
-          ),
-          trailing:
-              _isAdmin && !isCurrentUser
-                  ? IconButton(
-                    icon: const Icon(
-                      Icons.remove_circle_outline,
-                      color: Colors.red,
-                    ),
-                    onPressed: () => _removeMember(member),
-                    tooltip: 'Remove member',
-                  )
-                  : null,
-        );
-      },
+        ),
+      ],
     );
   }
 

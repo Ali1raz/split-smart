@@ -62,4 +62,10 @@ CREATE POLICY "Admins can delete expense shares" ON expense_shares
             AND gm.user_id = auth.uid()
             AND gm.is_admin = true
         )
-    ); 
+    );
+
+-- Add new policy to allow group admins to delete groups
+drop policy if exists "Group admins can delete groups" on public.groups;
+create policy "Group admins can delete groups"
+  on public.groups for delete
+  using (is_group_admin(id)); 
