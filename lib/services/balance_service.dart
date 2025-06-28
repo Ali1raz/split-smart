@@ -367,6 +367,16 @@ class BalanceService {
     }
   }
 
+  // Get current balance amount
+  Future<double> getCurrentBalance() async {
+    try {
+      final balance = await getUserBalance();
+      return (balance?['current_balance'] as num?)?.toDouble() ?? 0.0;
+    } catch (e) {
+      return 0.0;
+    }
+  }
+
   // Get outstanding loan amount
   Future<double> getOutstandingLoan() async {
     try {
