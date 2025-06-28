@@ -54,9 +54,9 @@ class _BalanceScreenState extends State<BalanceScreen>
 
       setState(() {
         _userBalance = results[0] as Map<String, dynamic>?;
-        _balanceStats = results[2] as Map<String, dynamic>?;
+        _balanceStats = results[1] as Map<String, dynamic>?;
         _defaultBalanceTitles = List<Map<String, dynamic>>.from(
-          results[3] as List<dynamic>,
+          results[2] as List<dynamic>,
         );
         _isLoading = false;
       });
