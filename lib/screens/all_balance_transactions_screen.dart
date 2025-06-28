@@ -467,7 +467,7 @@ class _AllBalanceTransactionsScreenState
                                                   ? Theme.of(context)
                                                       .colorScheme
                                                       .primary
-                                                      .withOpacity(0.08)
+                                                      .withValues(alpha: 0.08)
                                                   : null,
                                           padding: const EdgeInsets.symmetric(
                                             horizontal: 18,
@@ -506,7 +506,7 @@ class _AllBalanceTransactionsScreenState
                                                   ? Theme.of(context)
                                                       .colorScheme
                                                       .primary
-                                                      .withOpacity(0.08)
+                                                      .withValues(alpha: 0.08)
                                                   : null,
                                           padding: const EdgeInsets.symmetric(
                                             horizontal: 18,

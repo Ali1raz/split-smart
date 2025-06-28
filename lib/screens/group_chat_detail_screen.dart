@@ -902,7 +902,9 @@ class _GroupChatDetailScreenState extends State<GroupChatDetailScreen>
                           fontWeight: FontWeight.w600,
                           color:
                               isMe
-                                  ? theme.colorScheme.onPrimary.withOpacity(0.9)
+                                  ? theme.colorScheme.onPrimary.withValues(
+                                    alpha: 0.9,
+                                  )
                                   : theme.colorScheme.primary,
                           fontSize: 12,
                         ),
@@ -968,7 +970,9 @@ class _GroupChatDetailScreenState extends State<GroupChatDetailScreen>
                             vertical: 4,
                           ),
                           decoration: BoxDecoration(
-                            color: theme.colorScheme.secondary.withOpacity(0.1),
+                            color: theme.colorScheme.secondary.withValues(
+                              alpha: 0.1,
+                            ),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Row(
@@ -1083,7 +1087,9 @@ class _GroupChatDetailScreenState extends State<GroupChatDetailScreen>
                         style: TextStyle(
                           color:
                               isMe
-                                  ? theme.colorScheme.onPrimary.withOpacity(0.9)
+                                  ? theme.colorScheme.onPrimary.withValues(
+                                    alpha: 0.9,
+                                  )
                                   : isExpense
                                   ? theme.colorScheme.onSurface
                                   : isPayment

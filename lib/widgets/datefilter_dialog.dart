@@ -81,7 +81,7 @@ class DateFilterDialogState extends State<DateFilterDialog> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       tileColor:
           isSelected
-              ? Theme.of(context).colorScheme.primary.withOpacity(0.08)
+              ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.08)
               : null,
     );
   }

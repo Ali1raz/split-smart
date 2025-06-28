@@ -64,7 +64,7 @@ class CategoryFilterDialog extends StatelessWidget {
                     isSelected
                         ? Theme.of(
                           context,
-                        ).colorScheme.primary.withOpacity(0.08)
+                        ).colorScheme.primary.withValues(alpha: 0.08)
                         : null,
               );
             }),
