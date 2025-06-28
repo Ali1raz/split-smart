@@ -6,6 +6,7 @@ import '../widgets/stats_card.dart';
 import '../widgets/stat_item.dart';
 import '../widgets/profile_card.dart';
 import '../widgets/details_modal.dart';
+import '../widgets/pie_chart_widget.dart';
 
 class StatsScreen extends StatefulWidget {
   const StatsScreen({super.key});
@@ -334,7 +335,7 @@ class _StatsScreenState extends State<StatsScreen>
       subtitle:
           '${groups.length} group${groups.length != 1 ? 's' : ''} • $activeGroups active',
       totalAmount:
-          groups.length > 0
+          groups.isNotEmpty
               ? '${(activeGroups / groups.length * 100).toStringAsFixed(0)}%'
               : '0%',
       icon: Icons.group,
@@ -386,16 +387,226 @@ class _StatsScreenState extends State<StatsScreen>
                       children: [
                         ProfileCard(profile: _profile),
                         const SizedBox(height: 20),
-                        _buildOverviewStats(theme),
+                        _buildExpensePieChart(theme),
                         const SizedBox(height: 20),
-                        _buildExpenseStats(theme),
+                        PieChartWidget(
+                          data: [
+                            ChartDataItem(
+                              label: 'Paid',
+                              value:
+                                  _expenseShares
+                                      .where((share) => share['is_paid'])
+                                      .length
+                                      .toDouble(),
+                              color: Colors.green,
+                              icon: Icons.check_circle,
+                            ),
+                            ChartDataItem(
+                              label: 'Pending',
+                              value:
+                                  _expenseShares
+                                      .where((share) => !share['is_paid'])
+                                      .length
+                                      .toDouble(),
+                              color: Colors.orange,
+                              icon: Icons.pending,
+                            ),
+                          ],
+                          title: 'Expense Shares',
+                          subtitle: 'Paid vs Pending',
+                          size: 120,
+                          onTap: () {
+                            final totalExpenses = _expenseShares.length;
+                            final paidExpenses =
+                                _expenseShares
+                                    .where((share) => share['is_paid'])
+                                    .length;
+                            final pendingExpenses =
+                                totalExpenses - paidExpenses;
+                            final paymentRate =
+                                totalExpenses > 0
+                                    ? (paidExpenses / totalExpenses * 100)
+                                    : 0.0;
+                            final allExpenseSharesForModal =
+                                _expenseShares
+                                    .map(
+                                      (share) => {
+                                        'expense_name':
+                                            share['expenses']?['title'] ??
+                                            'Unknown Expense',
+                                        'group_name':
+                                            share['expenses']?['groups']?['name'] ??
+                                            'Unknown Group',
+                                        'amount_owed': share['amount_owed'],
+                                        'is_paid': share['is_paid'],
+                                      },
+                                    )
+                                    .toList();
+                            final paidExpenseList =
+                                allExpenseSharesForModal
+                                    .where((share) => share['is_paid'])
+                                    .toList();
+                            final pendingExpenseList =
+                                allExpenseSharesForModal
+                                    .where((share) => !share['is_paid'])
+                                    .toList();
+                            showDetailsModal(
+                              context,
+                              title: 'Expense Shares',
+                              subtitle: 'Breakdown of your expense shares',
+                              totalAmount: totalExpenses.toString(),
+                              icon: Icons.pie_chart,
+                              children: [
+                                StatItem(
+                                  label: 'Total Shares',
+                                  value: totalExpenses.toString(),
+                                  icon: Icons.list,
+                                  color: Theme.of(context).colorScheme.tertiary,
+                                  onTap:
+                                      () => _showExpenseDetailsModal(
+                                        'All Expense Shares',
+                                        allExpenseSharesForModal,
+                                      ),
+                                ),
+                                StatItem(
+                                  label: 'Payment Rate',
+                                  value: '${paymentRate.toStringAsFixed(1)}%',
+                                  icon: Icons.trending_up,
+                                  color: Theme.of(context).colorScheme.primary,
+                                  onTap: null,
+                                ),
+                                StatItem(
+                                  label: 'Paid',
+                                  value: paidExpenses.toString(),
+                                  icon: Icons.check_circle,
+                                  color: Colors.green,
+                                  onTap:
+                                      () => _showExpenseDetailsModal(
+                                        'Paid Expenses',
+                                        paidExpenseList,
+                                      ),
+                                ),
+                                StatItem(
+                                  label: 'Pending',
+                                  value: pendingExpenses.toString(),
+                                  icon: Icons.pending,
+                                  color: Colors.orange,
+                                  onTap:
+                                      () => _showExpenseDetailsModal(
+                                        'Pending Expenses',
+                                        pendingExpenseList,
+                                      ),
+                                ),
+                              ],
+                              isEmpty: totalExpenses == 0,
+                              emptyTitle: 'No expense shares found',
+                              emptySubtitle: 'You have no expense shares yet',
+                              emptyIcon: Icons.inbox_outlined,
+                            );
+                          },
+                        ),
                         const SizedBox(height: 20),
-                        _buildPaymentStats(theme),
+                        PieChartWidget(
+                          data: [
+                            ChartDataItem(
+                              label: 'Average',
+                              value:
+                                  _expenseShares.isNotEmpty
+                                      ? (_expenseShares.fold(
+                                                0.0,
+                                                (sum, share) =>
+                                                    sum +
+                                                    (share['amount_owed']
+                                                        as num),
+                                              ) /
+                                              _expenseShares.length)
+                                          .roundToDouble()
+                                      : 0.0,
+                              color: theme.colorScheme.primary,
+                              icon: Icons.calculate,
+                            ),
+                            ChartDataItem(
+                              label: 'Maximum',
+                              value:
+                                  _expenseShares.isNotEmpty
+                                      ? _expenseShares.fold(
+                                        0.0,
+                                        (max, share) =>
+                                            (share['amount_owed'] as num) > max
+                                                ? (share['amount_owed'] as num)
+                                                    .toDouble()
+                                                : max,
+                                      )
+                                      : 0.0,
+                              color: theme.colorScheme.error,
+                              icon: Icons.trending_up,
+                            ),
+                          ],
+                          title: 'Payment Details',
+                          subtitle: 'Average vs Maximum Amount',
+                          size: 120,
+                          onTap: () {
+                            final avgAmountOwed =
+                                _expenseShares.isNotEmpty
+                                    ? (_expenseShares.fold(
+                                              0.0,
+                                              (sum, share) =>
+                                                  sum +
+                                                  (share['amount_owed'] as num),
+                                            ) /
+                                            _expenseShares.length)
+                                        .roundToDouble()
+                                    : 0.0;
+                            final maxAmountOwed =
+                                _expenseShares.isNotEmpty
+                                    ? _expenseShares.fold(
+                                      0.0,
+                                      (max, share) =>
+                                          (share['amount_owed'] as num) > max
+                                              ? (share['amount_owed'] as num)
+                                                  .toDouble()
+                                              : max,
+                                    )
+                                    : 0.0;
+                            showDetailsModal(
+                              context,
+                              title: 'Payment Details',
+                              subtitle: 'Amount statistics',
+                              totalAmount:
+                                  'Rs ${(avgAmountOwed + maxAmountOwed).toStringAsFixed(2)}',
+                              icon: Icons.payment,
+                              children: [
+                                StatItem(
+                                  label: 'Average Amount',
+                                  value:
+                                      'Rs ${avgAmountOwed.toStringAsFixed(2)}',
+                                  icon: Icons.calculate,
+                                  color: theme.colorScheme.primary,
+                                  onTap: null,
+                                ),
+                                StatItem(
+                                  label: 'Maximum Amount',
+                                  value:
+                                      'Rs ${maxAmountOwed.toStringAsFixed(2)}',
+                                  icon: Icons.trending_up,
+                                  color: theme.colorScheme.error,
+                                  onTap: null,
+                                ),
+                              ],
+                              isEmpty: _expenseShares.isEmpty,
+                              emptyTitle: 'No payment data',
+                              emptySubtitle: 'You have no expense shares yet',
+                              emptyIcon: Icons.payment_outlined,
+                            );
+                          },
+                        ),
                         const SizedBox(height: 20),
                         _buildTransactionStats(theme),
                         const SizedBox(height: 20),
-                        _buildGroupStats(theme),
-                        const SizedBox(height: 20),
+                        _buildPaymentStatusPieChart(theme),
+                        const SizedBox(height: 32),
+                        _buildGroupActivityPieChart(theme),
+                        const SizedBox(height: 32),
                       ],
                     ),
                   ),
@@ -404,7 +615,7 @@ class _StatsScreenState extends State<StatsScreen>
     );
   }
 
-  Widget _buildOverviewStats(ThemeData theme) {
+  Widget _buildExpensePieChart(ThemeData theme) {
     final totalOwed = _expenseShares
         .where((share) => !share['is_paid'])
         .fold(0.0, (sum, share) => sum + (share['amount_owed'] as num));
@@ -463,155 +674,79 @@ class _StatsScreenState extends State<StatsScreen>
             )
             .toList();
 
-    return StatsCard(
-      title: 'Overview',
-      color: theme.colorScheme.primary,
-      children: [
-        StatItem(
-          label: 'Total Owed',
-          value: 'Rs ${totalOwed.toStringAsFixed(2)}',
+    return PieChartWidget(
+      data: [
+        ChartDataItem(
+          label: 'Owed',
+          value: totalOwed,
+          color: theme.colorScheme.error,
           icon: Icons.account_balance_wallet,
-          color: theme.colorScheme.error,
-          onTap:
-              () => _showExpenseDetailsModal('Expenses You Owe', owedExpenses),
         ),
-        StatItem(
-          label: 'Total Paid',
-          value: 'Rs ${totalPaid.toStringAsFixed(2)}',
-          icon: Icons.check_circle,
-          color: theme.colorScheme.primary,
-          onTap:
-              () => _showExpenseDetailsModal('Expenses You Paid', paidExpenses),
-        ),
-        StatItem(
-          label: 'Total Created',
-          value: 'Rs ${totalCreated.toStringAsFixed(2)}',
-          icon: Icons.add_circle,
-          color: theme.colorScheme.secondary,
-          onTap:
-              () => _showExpenseDetailsModal(
-                'Expenses You Created',
-                createdExpensesForModal,
-              ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildExpenseStats(ThemeData theme) {
-    final totalExpenses = _expenseShares.length;
-    final paidExpenses =
-        _expenseShares.where((share) => share['is_paid']).length;
-    final pendingExpenses = totalExpenses - paidExpenses;
-    final paymentRate =
-        totalExpenses > 0 ? (paidExpenses / totalExpenses * 100) : 0.0;
-
-    // Transform expense shares for modals
-    final allExpenseSharesForModal =
-        _expenseShares
-            .map(
-              (share) => {
-                'expense_name':
-                    share['expenses']?['title'] ?? 'Unknown Expense',
-                'group_name':
-                    share['expenses']?['groups']?['name'] ?? 'Unknown Group',
-                'amount_owed': share['amount_owed'],
-                'is_paid': share['is_paid'],
-              },
-            )
-            .toList();
-
-    final paidExpenseList =
-        allExpenseSharesForModal.where((share) => share['is_paid']).toList();
-
-    final pendingExpenseList =
-        allExpenseSharesForModal.where((share) => !share['is_paid']).toList();
-
-    return StatsCard(
-      title: 'Expense Statistics',
-      color: theme.colorScheme.secondary,
-      children: [
-        StatItem(
-          label: 'Total Shares',
-          value: totalExpenses.toString(),
-          icon: Icons.list,
-          color: theme.colorScheme.tertiary,
-          onTap:
-              () => _showExpenseDetailsModal(
-                'All Expense Shares',
-                allExpenseSharesForModal,
-              ),
-        ),
-        StatItem(
-          label: 'Payment Rate',
-          value: '${paymentRate.toStringAsFixed(1)}%',
-          icon: Icons.trending_up,
-          color: theme.colorScheme.primary,
-          onTap: null, // No details for percentage
-        ),
-        StatItem(
+        ChartDataItem(
           label: 'Paid',
-          value: paidExpenses.toString(),
-          icon: Icons.check_circle,
-          color: Colors.green,
-          onTap:
-              () => _showExpenseDetailsModal('Paid Expenses', paidExpenseList),
-        ),
-        StatItem(
-          label: 'Pending',
-          value: pendingExpenses.toString(),
-          icon: Icons.pending,
-          color: Colors.orange,
-          onTap:
-              () => _showExpenseDetailsModal(
-                'Pending Expenses',
-                pendingExpenseList,
-              ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildPaymentStats(ThemeData theme) {
-    final avgAmountOwed =
-        _expenseShares.isNotEmpty
-            ? _expenseShares.fold(
-                  0.0,
-                  (sum, share) => sum + (share['amount_owed'] as num),
-                ) /
-                _expenseShares.length
-            : 0.0;
-
-    final maxAmountOwed =
-        _expenseShares.isNotEmpty
-            ? _expenseShares.fold(
-              0.0,
-              (max, share) =>
-                  (share['amount_owed'] as num) > max
-                      ? (share['amount_owed'] as num).toDouble()
-                      : max,
-            )
-            : 0.0;
-
-    return StatsCard(
-      title: 'Payment Details',
-      color: theme.colorScheme.tertiary,
-      children: [
-        StatItem(
-          label: 'Avg Amount',
-          value: 'Rs ${avgAmountOwed.toStringAsFixed(2)}',
-          icon: Icons.calculate,
+          value: totalPaid,
           color: theme.colorScheme.primary,
-          onTap: null, // No details for average
+          icon: Icons.check_circle,
         ),
-        StatItem(
-          label: 'Max Amount',
-          value: 'Rs ${maxAmountOwed.toStringAsFixed(2)}',
-          icon: Icons.trending_up,
-          color: theme.colorScheme.error,
-          onTap: null, // No details for max
+        ChartDataItem(
+          label: 'Created',
+          value: totalCreated,
+          color: theme.colorScheme.secondary,
+          icon: Icons.add_circle,
         ),
       ],
+      title: 'Expense Overview',
+      subtitle: 'Distribution of your expenses',
+      size: 120,
+      onTap: () {
+        showDetailsModal(
+          context,
+          title: 'Expense Overview',
+          subtitle: 'Detailed breakdown of your expenses',
+          icon: Icons.pie_chart,
+          children: [
+            StatItem(
+              label: 'Total Owed',
+              value: 'Rs ${totalOwed.toStringAsFixed(2)}',
+              icon: Icons.account_balance_wallet,
+              color: theme.colorScheme.error,
+              onTap:
+                  () => _showExpenseDetailsModal(
+                    'Expenses You Owe',
+                    owedExpenses,
+                  ),
+            ),
+            StatItem(
+              label: 'Total Paid',
+              value: 'Rs ${totalPaid.toStringAsFixed(2)}',
+              icon: Icons.check_circle,
+              color: theme.colorScheme.primary,
+              onTap:
+                  () => _showExpenseDetailsModal(
+                    'Expenses You Paid',
+                    paidExpenses,
+                  ),
+            ),
+            StatItem(
+              label: 'Total Created',
+              value: 'Rs ${totalCreated.toStringAsFixed(2)}',
+              icon: Icons.add_circle,
+              color: theme.colorScheme.secondary,
+              onTap:
+                  () => _showExpenseDetailsModal(
+                    'Expenses You Created',
+                    createdExpensesForModal,
+                  ),
+            ),
+          ],
+          isEmpty: false,
+          totalAmount:
+              'Rs ${(totalOwed + totalPaid + totalCreated).toStringAsFixed(2)}',
+          emptyTitle: 'No expenses found',
+          emptySubtitle: 'You haven\'t recorded any expenses yet',
+          emptyIcon: Icons.receipt_outlined,
+        );
+      },
     );
   }
 
@@ -738,35 +873,6 @@ class _StatsScreenState extends State<StatsScreen>
     );
   }
 
-  Widget _buildGroupStats(ThemeData theme) {
-    final totalGroups = _groups.length;
-    final activeGroups = _groups.where((group) => _isGroupActive(group)).length;
-
-    final activeGroupList =
-        _groups.where((group) => _isGroupActive(group)).toList();
-
-    return StatsCard(
-      title: 'Group Statistics',
-      color: theme.colorScheme.primary,
-      children: [
-        StatItem(
-          label: 'Total Groups',
-          value: totalGroups.toString(),
-          icon: Icons.group,
-          color: theme.colorScheme.primary,
-          onTap: () => _showGroupDetailsModal('All Groups', _groups),
-        ),
-        StatItem(
-          label: 'Active Groups',
-          value: activeGroups.toString(),
-          icon: Icons.chat,
-          color: theme.colorScheme.secondary,
-          onTap: () => _showGroupDetailsModal('Active Groups', activeGroupList),
-        ),
-      ],
-    );
-  }
-
   bool _isGroupActive(Map<String, dynamic> group) {
     final lastMessage = group['last_message'];
     if (lastMessage == null) return false;
@@ -778,5 +884,159 @@ class _StatsScreenState extends State<StatsScreen>
     } catch (e) {
       return false;
     }
+  }
+
+  Widget _buildPaymentStatusPieChart(ThemeData theme) {
+    final paidExpenses =
+        _expenseShares.where((share) => share['is_paid']).length;
+    final pendingExpenses =
+        _expenseShares.where((share) => !share['is_paid']).length;
+
+    final chartData = <ChartDataItem>[
+      if (paidExpenses > 0)
+        ChartDataItem(
+          label: 'Paid',
+          value: paidExpenses.toDouble(),
+          color: Colors.green,
+          icon: Icons.check_circle,
+        ),
+      if (pendingExpenses > 0)
+        ChartDataItem(
+          label: 'Pending',
+          value: pendingExpenses.toDouble(),
+          color: Colors.orange,
+          icon: Icons.pending,
+        ),
+    ];
+
+    return PieChartWidget(
+      data: chartData,
+      title: 'Payment Status',
+      subtitle: 'Distribution of expense payments',
+      centerText: 'Total',
+      size: 120,
+      onTap: () {
+        final total = paidExpenses + pendingExpenses;
+        if (total > 0) {
+          showDetailsModal(
+            context,
+            title: 'Payment Status',
+            subtitle: 'Breakdown of expense payment status',
+            totalAmount: total.toString(),
+            icon: Icons.payment,
+            children: [
+              if (paidExpenses > 0)
+                _buildPaymentBreakdownItem(
+                  'Paid',
+                  paidExpenses,
+                  total,
+                  Colors.green,
+                  Icons.check_circle,
+                ),
+              if (pendingExpenses > 0)
+                _buildPaymentBreakdownItem(
+                  'Pending',
+                  pendingExpenses,
+                  total,
+                  Colors.orange,
+                  Icons.pending,
+                ),
+            ],
+            isEmpty: chartData.isEmpty,
+            emptyTitle: 'No expenses found',
+            emptySubtitle: 'You haven\'t recorded any expenses yet',
+            emptyIcon: Icons.receipt_outlined,
+          );
+        }
+      },
+    );
+  }
+
+  Widget _buildGroupActivityPieChart(ThemeData theme) {
+    final activeGroups = _groups.where((group) => _isGroupActive(group)).length;
+    final inactiveGroups =
+        _groups.where((group) => !_isGroupActive(group)).length;
+
+    final chartData = <ChartDataItem>[
+      if (activeGroups > 0)
+        ChartDataItem(
+          label: 'Active',
+          value: activeGroups.toDouble(),
+          color: Colors.green,
+          icon: Icons.chat,
+        ),
+      if (inactiveGroups > 0)
+        ChartDataItem(
+          label: 'Inactive',
+          value: inactiveGroups.toDouble(),
+          color: Colors.grey,
+          icon: Icons.group,
+        ),
+    ];
+
+    return PieChartWidget(
+      data: chartData,
+      title: 'Group Activity',
+      subtitle: 'Distribution of group activity',
+      centerText: 'Groups',
+      size: 120,
+      onTap: () {
+        _showGroupDetailsModal('All Groups', _groups);
+      },
+    );
+  }
+
+  Widget _buildPaymentBreakdownItem(
+    String label,
+    int value,
+    int total,
+    Color color,
+    IconData icon,
+  ) {
+    final percentage = total > 0 ? (value / total * 100) : 0.0;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.3), width: 1),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, color: color, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                Text(
+                  '$value expenses (${percentage.toStringAsFixed(1)}%)',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.7),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
