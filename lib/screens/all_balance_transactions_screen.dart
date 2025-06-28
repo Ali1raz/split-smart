@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import '../services/balance_service.dart';
 import '../utils/date_formatter.dart';
 import 'balance_transaction_detail_screen.dart';
+import '../widgets/save_transaction_button.dart';
 
 class AllBalanceTransactionsScreen extends StatefulWidget {
-  const AllBalanceTransactionsScreen({Key? key}) : super(key: key);
+  const AllBalanceTransactionsScreen({super.key});
 
   @override
   State<AllBalanceTransactionsScreen> createState() =>
@@ -102,7 +103,7 @@ class _AllBalanceTransactionsScreenState
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('All Balance Transactions'),
+        title: const Text('All Transactions'),
         bottom: TabBar(
           controller: _tabController,
           tabs: const [Tab(text: 'All Payments'), Tab(text: 'Spendings')],
@@ -134,36 +135,57 @@ class _AllBalanceTransactionsScreenState
                         final amount =
                             (tx['amount'] as num?)?.toDouble() ?? 0.0;
                         final title = tx['title'] as String? ?? '';
-                        final desc = tx['description'] as String? ?? '';
                         final date = tx['created_at'] as String?;
                         return ListTile(
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 10,
+                          ),
                           leading: Icon(
                             _iconForType(type),
                             color: _colorForType(context, type),
+                            size: 32,
                           ),
-                          title: Text(
-                            title,
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          subtitle: Column(
+                          title: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                '${type[0].toUpperCase()}${type.substring(1)} | ${DateFormatter.formatFullDateTime(date)}',
-                              ),
-                              if (desc.isNotEmpty)
-                                Text(
-                                  desc,
-                                  style: const TextStyle(fontSize: 12),
+                                DateFormatter.formatFullDateTime(date),
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey,
                                 ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                title,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 16,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Rs ${amount.toStringAsFixed(2)}',
+                                style: TextStyle(
+                                  color: _colorForType(context, type),
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                type[0].toUpperCase() + type.substring(1),
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: _colorForType(context, type),
+                                ),
+                              ),
                             ],
                           ),
-                          trailing: Text(
-                            '${type == 'spend' || type == 'loan' ? '-' : '+'}Rs ${amount.toStringAsFixed(2)}',
-                            style: TextStyle(
-                              color: _colorForType(context, type),
-                              fontWeight: FontWeight.bold,
-                            ),
+                          trailing: SaveTransactionButton(
+                            transaction: tx,
+                            isCompact: true,
                           ),
                           onTap: () {
                             Navigator.push(

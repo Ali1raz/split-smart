@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:split_smart_supabase/utils/constants.dart';
 import '../utils/date_formatter.dart';
+import '../widgets/save_transaction_button.dart';
 
 class BalanceTransactionDetailScreen extends StatelessWidget {
   final Map<String, dynamic> transaction;
@@ -64,6 +65,8 @@ class BalanceTransactionDetailScreen extends StatelessWidget {
               'Balance After: Rs ${(tx['balance_after'] as num?)?.toStringAsFixed(2) ?? '-'}',
               style: theme.textTheme.bodyMedium,
             ),
+            const SizedBox(height: 24),
+            SaveTransactionButton(transaction: tx, isCompact: false),
           ],
         ),
       ),
