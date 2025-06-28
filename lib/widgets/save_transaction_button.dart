@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'brand_button_2.dart';
 import '../services/transaction_export_service.dart';
 
 class SaveTransactionButton extends StatelessWidget {
@@ -19,8 +20,6 @@ class SaveTransactionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     if (isCompact) {
       return IconButton(
         onPressed: () => _saveTransaction(context),
@@ -38,16 +37,11 @@ class SaveTransactionButton extends StatelessWidget {
       );
     }
 
-    return ElevatedButton.icon(
+    return BrandButton2(
+      label: customLabel ?? 'Save Transaction',
+      icon: customIcon ?? Icons.save_alt,
+      isActive: true,
       onPressed: () => _saveTransaction(context),
-      icon: Icon(customIcon ?? Icons.save_alt),
-      label: Text(customLabel ?? 'Save Transaction'),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: theme.colorScheme.primary,
-        foregroundColor: theme.colorScheme.onPrimary,
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
     );
   }
 
