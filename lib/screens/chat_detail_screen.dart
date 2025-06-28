@@ -27,11 +27,13 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   final List<String> _selectedMessageIds = [];
   final Set<String> _locallyDeletedMessageIds = {};
   StreamSubscription? _messagesSubscription;
+  DateTime? _lastReadTimestamp;
 
   @override
   void initState() {
     super.initState();
     _loadMessages();
+    _loadLastReadTimestamp();
     _markMessagesAsRead();
     _setupRealtimeSubscription();
   }
@@ -88,6 +90,16 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     }
   }
 
+  Future<void> _loadLastReadTimestamp() async {
+    try {
+      _lastReadTimestamp = await _chatService.getLastReadTimestamp(
+        widget.otherUserId,
+      );
+    } catch (e) {
+      // Handle error silently
+    }
+  }
+
   Future<void> _markMessagesAsRead() async {
     try {
       await _chatService.markMessagesAsReadAndGetCount(widget.otherUserId);
@@ -121,6 +133,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     final currentUserId = Supabase.instance.client.auth.currentUser!.id;
 
     DateTime? currentDay;
+    bool unreadDividerAdded = false;
 
     // Filter out messages deleted for current user at database level
     final filteredForDatabaseDeletion = _messages.where((msg) {
@@ -155,6 +168,18 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
           currentDay = messageDate;
         }
 
+        // Add unread divider if this is the first unread message
+        if (!unreadDividerAdded &&
+            _lastReadTimestamp != null &&
+            messageTime.isAfter(_lastReadTimestamp!) &&
+            message['sender_id'] != currentUserId) {
+          groupedMessages.add({
+            'type': 'unread_divider',
+            'display_text': 'Unread messages',
+          });
+          unreadDividerAdded = true;
+        }
+
         // Add the message
         groupedMessages.add({'type': 'message', 'data': message});
       } catch (e) {
@@ -169,6 +194,51 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   // Build day separator widget
   Widget _buildDaySeparator(String text, ThemeData theme) {
     return DateFormatter.buildDaySeparator(text, theme);
+  }
+
+  // Build unread divider widget
+  Widget _buildUnreadDivider(ThemeData theme) {
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 16),
+      child: Row(
+        children: [
+          Expanded(
+            child: Divider(
+              color: theme.colorScheme.primary.withValues(alpha: 0.5),
+              thickness: 1,
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: theme.colorScheme.primary.withValues(alpha: 0.3),
+                  width: 1,
+                ),
+              ),
+              child: Text(
+                'Unread messages',
+                style: TextStyle(
+                  color: theme.colorScheme.primary,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+          Expanded(
+            child: Divider(
+              color: theme.colorScheme.primary.withValues(alpha: 0.5),
+              thickness: 1,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   void _onMessageLongPress(String messageId) {
@@ -337,6 +407,8 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                                 item['display_text'],
                                 theme,
                               );
+                            } else if (item['type'] == 'unread_divider') {
+                              return _buildUnreadDivider(theme);
                             } else {
                               final message = item['data'];
                               final isMe =

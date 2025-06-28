@@ -23,7 +23,8 @@ class GroupChatDetailScreen extends StatefulWidget {
   State<GroupChatDetailScreen> createState() => _GroupChatDetailScreenState();
 }
 
-class _GroupChatDetailScreenState extends State<GroupChatDetailScreen> {
+class _GroupChatDetailScreenState extends State<GroupChatDetailScreen>
+    with SingleTickerProviderStateMixin {
   final ChatService _chatService = ChatService();
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
@@ -38,13 +39,18 @@ class _GroupChatDetailScreenState extends State<GroupChatDetailScreen> {
   final Set<String> _locallyDeletedMessageIds = {};
   String _selectedCategory = 'all';
   late String _currentGroupName;
+  late TabController _tabController;
+  DateTime? _lastReadTimestamp;
 
   @override
   void initState() {
     super.initState();
     _currentGroupName = widget.groupName;
+    _tabController = TabController(length: 4, vsync: this);
+    _tabController.addListener(_onTabChanged);
     _loadGroupSummary();
     _loadInitialMessages();
+    _loadLastReadTimestamp();
     _setupRealtimeSubscription();
   }
 
@@ -60,6 +66,7 @@ class _GroupChatDetailScreenState extends State<GroupChatDetailScreen> {
     _messageController.dispose();
     _scrollController.dispose();
     _messagesSubscription?.cancel();
+    _tabController.dispose();
     super.dispose();
   }
 
@@ -119,6 +126,16 @@ class _GroupChatDetailScreenState extends State<GroupChatDetailScreen> {
         // Mark group messages as read after loading
         _markGroupMessagesAsRead();
       }
+    } catch (e) {
+      // Handle error silently
+    }
+  }
+
+  Future<void> _loadLastReadTimestamp() async {
+    try {
+      _lastReadTimestamp = await _chatService.getLastReadGroupTimestamp(
+        widget.groupId,
+      );
     } catch (e) {
       // Handle error silently
     }
@@ -220,8 +237,10 @@ class _GroupChatDetailScreenState extends State<GroupChatDetailScreen> {
   List<Map<String, dynamic>> _getGroupedMessages() {
     final filteredMessages = _getFilteredMessages();
     final groupedMessages = <Map<String, dynamic>>[];
+    final currentUserId = Supabase.instance.client.auth.currentUser!.id;
 
     DateTime? currentDay;
+    bool unreadDividerAdded = false;
 
     for (final message in filteredMessages) {
       try {
@@ -243,6 +262,18 @@ class _GroupChatDetailScreenState extends State<GroupChatDetailScreen> {
             'display_text': DateFormatter.formatDaySeparator(messageDate),
           });
           currentDay = messageDate;
+        }
+
+        // Add unread divider if this is the first unread message
+        if (!unreadDividerAdded &&
+            _lastReadTimestamp != null &&
+            messageTime.isAfter(_lastReadTimestamp!) &&
+            message['sender_id'] != currentUserId) {
+          groupedMessages.add({
+            'type': 'unread_divider',
+            'display_text': 'Unread messages',
+          });
+          unreadDividerAdded = true;
         }
 
         // Add the message
@@ -741,6 +772,8 @@ class _GroupChatDetailScreenState extends State<GroupChatDetailScreen> {
                               item['display_text'],
                               theme,
                             );
+                          } else if (item['type'] == 'unread_divider') {
+                            return _buildUnreadDivider(theme);
                           } else {
                             final message = item['data'];
                             final senderId = message['sender_id'];
@@ -1283,6 +1316,51 @@ class _GroupChatDetailScreenState extends State<GroupChatDetailScreen> {
 
   Widget _buildDaySeparator(String text, ThemeData theme) {
     return DateFormatter.buildDaySeparator(text, theme);
+  }
+
+  // Build unread divider widget
+  Widget _buildUnreadDivider(ThemeData theme) {
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 16),
+      child: Row(
+        children: [
+          Expanded(
+            child: Divider(
+              color: theme.colorScheme.primary.withValues(alpha: 0.5),
+              thickness: 1,
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: theme.colorScheme.primary.withValues(alpha: 0.3),
+                  width: 1,
+                ),
+              ),
+              child: Text(
+                'Unread messages',
+                style: TextStyle(
+                  color: theme.colorScheme.primary,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+          Expanded(
+            child: Divider(
+              color: theme.colorScheme.primary.withValues(alpha: 0.5),
+              thickness: 1,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showGroupDetailsModal() {
