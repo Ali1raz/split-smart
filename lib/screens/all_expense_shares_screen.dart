@@ -47,12 +47,32 @@ class _AllExpenseSharesScreenState extends State<AllExpenseSharesScreen> {
 
   Future<void> _markAsPaid(String expenseShareId) async {
     try {
-      await _chatService.markExpenseShareAsPaid(expenseShareId);
+      final paymentResult = await _chatService.markExpenseShareAsPaid(
+        expenseShareId,
+      );
       await _loadExpenseShares(); // Reload data
+
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Marked as paid!')));
+        String message;
+        if (paymentResult['payment_method'] == 'balance') {
+          message =
+              'Paid from balance! Remaining balance: Rs ${paymentResult['remaining_balance'].toStringAsFixed(2)}';
+        } else if (paymentResult['payment_method'] == 'mixed') {
+          final fromBalance = paymentResult['amount_paid_from_balance'];
+          final fromLoan = paymentResult['amount_paid_from_loan'];
+          message =
+              'Paid Rs ${fromBalance.toStringAsFixed(2)} from balance and Rs ${fromLoan.toStringAsFixed(2)} from loan';
+        } else {
+          message =
+              'Paid from loan! Outstanding loan: Rs ${paymentResult['amount_paid_from_loan'].toStringAsFixed(2)}';
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(message),
+            duration: const Duration(seconds: 3),
+          ),
+        );
       }
     } catch (e) {
       if (mounted) {

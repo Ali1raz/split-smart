@@ -1,8 +1,10 @@
 import 'package:split_smart_supabase/utils/constants.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'balance_service.dart';
 
 class ChatService {
   final SupabaseClient _supabase = Supabase.instance.client;
+  final BalanceService _balanceService = BalanceService();
 
   // Get all users except current user
   Future<List<Map<String, dynamic>>> getUsers() async {
@@ -1238,8 +1240,10 @@ class ChatService {
     }
   }
 
-  // Mark an expense share as paid
-  Future<void> markExpenseShareAsPaid(String expenseShareId) async {
+  // Mark an expense share as paid with balance integration
+  Future<Map<String, dynamic>> markExpenseShareAsPaid(
+    String expenseShareId,
+  ) async {
     try {
       // First, get the expense share details to find the group and expense info
       final expenseShare =
@@ -1249,6 +1253,19 @@ class ChatService {
               .eq('id', expenseShareId)
               .eq('user_id', _supabase.auth.currentUser!.id)
               .single();
+
+      final amountOwed = (expenseShare['amount_owed'] as num).toDouble();
+      final expenseTitle = expenseShare['expenses']['title'] as String;
+      final groupId = expenseShare['expenses']['group_id'] as String;
+
+      // Use balance service to handle payment
+      final paymentResult = await _balanceService.spendFromBalance(
+        amount: amountOwed,
+        title: 'Payment for $expenseTitle',
+        description: 'Expense share payment',
+        expenseShareId: expenseShareId,
+        groupId: groupId,
+      );
 
       // Update the expense share as paid
       await _supabase
@@ -1268,25 +1285,45 @@ class ChatService {
               .eq('id', _supabase.auth.currentUser!.id)
               .single();
 
-      // Create payment data for the message
+      // Create payment data for the message with balance information
       final paymentData = {
         'expense_id': expenseShare['expense_id'],
-        'expense_title': expenseShare['expenses']['title'],
-        'amount_paid': expenseShare['amount_owed'],
+        'expense_title': expenseTitle,
+        'amount_paid': amountOwed,
         'paid_by': _supabase.auth.currentUser!.id,
         'paid_by_name': currentUserProfile['display_name'],
         'expense_share_id': expenseShareId,
         'paid_at': DateTime.now().toUtc().toIso8601String(),
+        'payment_method': paymentResult['payment_method'],
+        'amount_paid_from_balance': paymentResult['amount_paid_from_balance'],
+        'amount_paid_from_loan': paymentResult['amount_paid_from_loan'],
+        'remaining_balance': paymentResult['remaining_balance'],
       };
+
+      // Create appropriate message content based on payment method
+      String messageContent;
+      if (paymentResult['payment_method'] == 'balance') {
+        messageContent =
+            '✅ ${currentUserProfile['display_name']} paid Rs ${amountOwed.toStringAsFixed(2)} for $expenseTitle (from balance)';
+      } else if (paymentResult['payment_method'] == 'mixed') {
+        final fromBalance = paymentResult['amount_paid_from_balance'];
+        final fromLoan = paymentResult['amount_paid_from_loan'];
+        messageContent =
+            '✅ ${currentUserProfile['display_name']} paid Rs ${amountOwed.toStringAsFixed(2)} for $expenseTitle (Rs ${fromBalance.toStringAsFixed(2)} from balance, Rs ${fromLoan.toStringAsFixed(2)} from loan)';
+      } else {
+        messageContent =
+            '✅ ${currentUserProfile['display_name']} paid Rs ${amountOwed.toStringAsFixed(2)} for $expenseTitle (from loan)';
+      }
 
       // Send a payment message to the group
       await sendGroupMessage(
-        groupId: expenseShare['expenses']['group_id'],
-        content:
-            '✅ ${currentUserProfile['display_name']} paid Rs ${expenseShare['amount_owed'].toStringAsFixed(2)} for ${expenseShare['expenses']['title']}',
+        groupId: groupId,
+        content: messageContent,
         category: 'payment',
         paymentData: paymentData,
       );
+
+      return paymentResult;
     } catch (e) {
       rethrow;
     }
@@ -1907,5 +1944,55 @@ class ChatService {
       result[groupId] = await getUnreadGroupMessageCount(groupId);
     }
     return result;
+  }
+
+  // Get the timestamp when user last read messages in a direct chat
+  Future<DateTime?> getLastReadTimestamp(String otherUserId) async {
+    try {
+      final currentUserId = _supabase.auth.currentUser!.id;
+
+      // Get the most recent message that was read by the current user
+      final response =
+          await _supabase
+              .from('messages')
+              .select('created_at')
+              .eq('sender_id', otherUserId)
+              .eq('receiver_id', currentUserId)
+              .eq('is_read', true)
+              .order('created_at', ascending: false)
+              .limit(1)
+              .single();
+
+      if (response != null) {
+        return DateTime.parse(response['created_at']);
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // Get the timestamp when user last read messages in a group chat
+  Future<DateTime?> getLastReadGroupTimestamp(String groupId) async {
+    try {
+      final currentUserId = _supabase.auth.currentUser!.id;
+
+      // Get the most recent group message read receipt for this group
+      final response =
+          await _supabase
+              .from('group_message_reads')
+              .select('read_at')
+              .eq('user_id', currentUserId)
+              .order('read_at', ascending: false)
+              .limit(1)
+              .single();
+
+      if (response != null) {
+        return DateTime.parse(response['read_at']);
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
   }
 }
