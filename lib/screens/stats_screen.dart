@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/chat_service.dart';
 import '../services/auth.dart';
+import '../services/balance_service.dart';
 import '../widgets/stats_card.dart';
 import '../widgets/stat_item.dart';
 import '../widgets/profile_card.dart';
@@ -17,11 +18,13 @@ class _StatsScreenState extends State<StatsScreen>
     with TickerProviderStateMixin {
   final ChatService _chatService = ChatService();
   final AuthService _authService = AuthService();
+  final BalanceService _balanceService = BalanceService();
 
   Map<String, dynamic>? _profile;
   List<Map<String, dynamic>> _expenseShares = [];
   List<Map<String, dynamic>> _createdExpenses = [];
   List<Map<String, dynamic>> _groups = [];
+  Map<String, dynamic>? _balanceStats;
   bool _isLoading = true;
 
   late AnimationController _animationController;
@@ -57,6 +60,7 @@ class _StatsScreenState extends State<StatsScreen>
         _chatService.getUserExpenseShares(),
         _chatService.getUserCreatedExpenses(),
         _chatService.getUserGroupsWithDetails(),
+        _balanceService.getBalanceStatistics(),
       ]);
 
       if (mounted) {
@@ -65,6 +69,7 @@ class _StatsScreenState extends State<StatsScreen>
           _expenseShares = futures[1] as List<Map<String, dynamic>>;
           _createdExpenses = futures[2] as List<Map<String, dynamic>>;
           _groups = futures[3] as List<Map<String, dynamic>>;
+          _balanceStats = futures[4] as Map<String, dynamic>;
           _isLoading = false;
         });
         _animationController.forward();
@@ -353,13 +358,6 @@ class _StatsScreenState extends State<StatsScreen>
         elevation: 0,
         backgroundColor: theme.colorScheme.surface,
         foregroundColor: theme.colorScheme.onSurface,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _loadData,
-            tooltip: 'Refresh',
-          ),
-        ],
       ),
       body:
           _isLoading
@@ -392,6 +390,8 @@ class _StatsScreenState extends State<StatsScreen>
                         _buildExpenseStats(theme),
                         const SizedBox(height: 20),
                         _buildPaymentStats(theme),
+                        const SizedBox(height: 20),
+                        _buildTransactionStats(theme),
                         const SizedBox(height: 20),
                         _buildGroupStats(theme),
                         const SizedBox(height: 20),
@@ -464,7 +464,6 @@ class _StatsScreenState extends State<StatsScreen>
 
     return StatsCard(
       title: 'Overview',
-      icon: Icons.analytics,
       color: theme.colorScheme.primary,
       children: [
         StatItem(
@@ -529,7 +528,6 @@ class _StatsScreenState extends State<StatsScreen>
 
     return StatsCard(
       title: 'Expense Statistics',
-      icon: Icons.receipt_long,
       color: theme.colorScheme.secondary,
       children: [
         StatItem(
@@ -596,7 +594,6 @@ class _StatsScreenState extends State<StatsScreen>
 
     return StatsCard(
       title: 'Payment Details',
-      icon: Icons.payment,
       color: theme.colorScheme.tertiary,
       children: [
         StatItem(
@@ -617,6 +614,129 @@ class _StatsScreenState extends State<StatsScreen>
     );
   }
 
+  Widget _buildTransactionStats(ThemeData theme) {
+    if (_balanceStats == null) {
+      return const SizedBox.shrink();
+    }
+
+    final thisMonthAdded =
+        (_balanceStats!['this_month_added'] as num?)?.toDouble() ?? 0.0;
+    final thisMonthSpent =
+        (_balanceStats!['this_month_spent'] as num?)?.toDouble() ?? 0.0;
+    final lastMonthAdded =
+        (_balanceStats!['last_month_added'] as num?)?.toDouble() ?? 0.0;
+    final lastMonthSpent =
+        (_balanceStats!['last_month_spent'] as num?)?.toDouble() ?? 0.0;
+    final outstandingLoan =
+        (_balanceStats!['outstanding_loan'] as num?)?.toDouble() ?? 0.0;
+    final totalLoans =
+        (_balanceStats!['total_loans'] as num?)?.toDouble() ?? 0.0;
+    final totalRepaid =
+        (_balanceStats!['total_repaid'] as num?)?.toDouble() ?? 0.0;
+
+    // Calculate monthly percentages
+    final monthlyIncome = thisMonthAdded;
+    final monthlyOutflow = thisMonthSpent;
+    final monthlySavingsRate =
+        monthlyIncome > 0
+            ? ((monthlyIncome - monthlyOutflow) / monthlyIncome * 100)
+            : 0.0;
+
+    // Calculate monthly changes
+    final monthlyAddedChange =
+        lastMonthAdded > 0
+            ? ((thisMonthAdded - lastMonthAdded) / lastMonthAdded * 100)
+            : 0.0;
+    final monthlySpentChange =
+        lastMonthSpent > 0
+            ? ((thisMonthSpent - lastMonthSpent) / lastMonthSpent * 100)
+            : 0.0;
+
+    // Calculate loan statistics
+    final overallRepaymentRate =
+        totalLoans > 0 ? (totalRepaid / totalLoans * 100) : 0.0;
+
+    return StatsCard(
+      title: 'Transactions',
+      color: theme.colorScheme.tertiary,
+      children: [
+        StatItem(
+          label: 'Added This Month',
+          value: 'Rs ${thisMonthAdded.toStringAsFixed(2)}',
+          icon: Icons.add_circle,
+          color: Colors.green,
+          onTap: null,
+        ),
+        StatItem(
+          label: 'Spent This Month',
+          value: 'Rs ${thisMonthSpent.toStringAsFixed(2)}',
+          icon: Icons.remove_circle,
+          color: Colors.red,
+          onTap: null,
+        ),
+        StatItem(
+          label: 'Monthly Savings Rate',
+          value: '${monthlySavingsRate.toStringAsFixed(1)}%',
+          icon: Icons.trending_up,
+          color: monthlySavingsRate >= 0 ? Colors.green : Colors.red,
+          onTap: null,
+        ),
+        if (monthlyAddedChange != 0) ...[
+          StatItem(
+            label: 'Added vs Last Month',
+            value:
+                '${monthlyAddedChange >= 0 ? '+' : ''}${monthlyAddedChange.toStringAsFixed(1)}%',
+            icon: Icons.trending_up,
+            color: monthlyAddedChange >= 0 ? Colors.green : Colors.red,
+            onTap: null,
+          ),
+        ],
+        if (monthlySpentChange != 0) ...[
+          StatItem(
+            label: 'Spent vs Last Month',
+            value:
+                '${monthlySpentChange >= 0 ? '+' : ''}${monthlySpentChange.toStringAsFixed(1)}%',
+            icon: Icons.trending_down,
+            color: monthlySpentChange <= 0 ? Colors.green : Colors.red,
+            onTap: null,
+          ),
+        ],
+        if (totalLoans > 0) ...[
+          StatItem(
+            label: 'Total Loans Taken',
+            value: 'Rs ${totalLoans.toStringAsFixed(2)}',
+            icon: Icons.credit_card,
+            color: theme.colorScheme.error,
+            onTap: null,
+          ),
+          StatItem(
+            label: 'Total Repaid',
+            value: 'Rs ${totalRepaid.toStringAsFixed(2)}',
+            icon: Icons.check_circle,
+            color: Colors.green,
+            onTap: null,
+          ),
+          StatItem(
+            label: 'Overall Repayment Rate',
+            value: '${overallRepaymentRate.toStringAsFixed(1)}%',
+            icon: Icons.percent,
+            color: overallRepaymentRate >= 80 ? Colors.green : Colors.orange,
+            onTap: null,
+          ),
+        ],
+        if (outstandingLoan > 0) ...[
+          StatItem(
+            label: 'Outstanding Loan',
+            value: 'Rs ${outstandingLoan.toStringAsFixed(2)}',
+            icon: Icons.warning_amber,
+            color: theme.colorScheme.error,
+            onTap: null,
+          ),
+        ],
+      ],
+    );
+  }
+
   Widget _buildGroupStats(ThemeData theme) {
     final totalGroups = _groups.length;
     final activeGroups =
@@ -627,7 +747,6 @@ class _StatsScreenState extends State<StatsScreen>
 
     return StatsCard(
       title: 'Group Statistics',
-      icon: Icons.group,
       color: theme.colorScheme.primary,
       children: [
         StatItem(
