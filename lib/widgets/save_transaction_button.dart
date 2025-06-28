@@ -1,8 +1,5 @@
-import 'dart:io';
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:path_provider/path_provider.dart';
-import '../utils/date_formatter.dart';
+import '../services/transaction_export_service.dart';
 
 class SaveTransactionButton extends StatelessWidget {
   final Map<String, dynamic> transaction;
@@ -55,6 +52,8 @@ class SaveTransactionButton extends StatelessWidget {
   }
 
   Future<void> _saveTransaction(BuildContext context) async {
+    final exportService = TransactionExportService();
+
     try {
       showDialog(
         context: context,
@@ -85,7 +84,7 @@ class SaveTransactionButton extends StatelessWidget {
             ),
       );
 
-      final filePath = await _exportTransactionToCsv(transaction);
+      final filePath = await exportService.exportTransactionToCsv(transaction);
 
       Navigator.of(context).pop();
 
@@ -110,7 +109,7 @@ class SaveTransactionButton extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
                     const Text(
-                      'You can find this file in your device\'s Documents folder under "split_smart_transactions".',
+                      'You can find this file in your device\'s Documents folder under "split_smart_expenses/transactions".',
                       style: TextStyle(fontSize: 12),
                     ),
                   ],
@@ -142,82 +141,5 @@ class SaveTransactionButton extends StatelessWidget {
             ),
       );
     }
-  }
-
-  Future<String?> _exportTransactionToCsv(Map<String, dynamic> tx) async {
-    final documentsPath = await _getDocumentsPath();
-    final now = DateTime.now();
-    final timestamp =
-        '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}_${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}${now.second.toString().padLeft(2, '0')}';
-    final fileName = 'transaction-${tx['id'] ?? timestamp}-$timestamp.csv';
-    final filePath = '$documentsPath/$fileName';
-
-    final csvContent = _generateTransactionCsvContent(tx);
-    final file = File(filePath);
-    await file.writeAsString(csvContent, encoding: utf8);
-    return filePath;
-  }
-
-  Future<String> _getDocumentsPath() async {
-    if (Platform.isAndroid) {
-      final directory = Directory(
-        '/storage/emulated/0/Documents/split_smart_transactions',
-      );
-      if (!await directory.exists()) {
-        await directory.create(recursive: true);
-      }
-      return directory.path;
-    } else {
-      final directory = await getApplicationDocumentsDirectory();
-      final subDir = Directory('${directory.path}/split_smart_transactions');
-      if (!await subDir.exists()) {
-        await subDir.create(recursive: true);
-      }
-      return subDir.path;
-    }
-  }
-
-  String _generateTransactionCsvContent(Map<String, dynamic> tx) {
-    final buffer = StringBuffer();
-    buffer.writeln('SPLIT SMART - TRANSACTION EXPORT');
-    buffer.writeln(
-      'Exported: ${DateFormatter.formatFullDateTime(DateTime.now())}',
-    );
-    buffer.writeln();
-    buffer.writeln('Transaction ID,${tx['id'] ?? '-'}');
-    buffer.writeln('Type,${tx['transaction_type'] ?? '-'}');
-    buffer.writeln(
-      'Amount,Rs ${(tx['amount'] as num?)?.toStringAsFixed(2) ?? '-'}',
-    );
-    buffer.writeln('Title,${_escapeCsvField(tx['title'] ?? '-')}');
-    buffer.writeln('Description,${_escapeCsvField(tx['description'] ?? '-')}');
-    buffer.writeln(
-      'Date/Time,${DateFormatter.formatFullDateTime(tx['created_at'])}',
-    );
-    buffer.writeln(
-      'Balance Before,Rs ${(tx['balance_before'] as num?)?.toStringAsFixed(2) ?? '-'}',
-    );
-    buffer.writeln(
-      'Balance After,Rs ${(tx['balance_after'] as num?)?.toStringAsFixed(2) ?? '-'}',
-    );
-    if (tx['expense_shares']?['expenses'] != null) {
-      buffer.writeln(
-        'Expense Title,${_escapeCsvField(tx['expense_shares']['expenses']['title'])}',
-      );
-    }
-    if (tx['expense_shares']?['groups'] != null) {
-      buffer.writeln(
-        'Group,${_escapeCsvField(tx['expense_shares']['groups']['name'])}',
-      );
-    }
-    buffer.writeln();
-    return buffer.toString();
-  }
-
-  String _escapeCsvField(String field) {
-    if (field.contains(',') || field.contains('"') || field.contains('\n')) {
-      return '"${field.replaceAll('"', '""')}"';
-    }
-    return field;
   }
 }
