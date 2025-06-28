@@ -259,10 +259,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           color: Theme.of(context).colorScheme.tertiary,
                         ),
                       ),
-                      title: const Text('All Balance Transactions'),
-                      subtitle: const Text(
-                        'View your full balance transaction history',
-                      ),
+                      title: const Text('Transactions history'),
+                      subtitle: const Text('View your transaction history'),
                       trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                       onTap: () {
                         Navigator.push(

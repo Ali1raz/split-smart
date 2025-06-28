@@ -12,16 +12,25 @@ class AllBalanceTransactionsScreen extends StatefulWidget {
 }
 
 class _AllBalanceTransactionsScreenState
-    extends State<AllBalanceTransactionsScreen> {
+    extends State<AllBalanceTransactionsScreen>
+    with SingleTickerProviderStateMixin {
   final BalanceService _balanceService = BalanceService();
   List<Map<String, dynamic>> _transactions = [];
   bool _isLoading = true;
   String? _error;
+  late TabController _tabController;
 
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
     _loadTransactions();
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadTransactions() async {
@@ -73,10 +82,32 @@ class _AllBalanceTransactionsScreenState
     }
   }
 
+  List<Map<String, dynamic>> _filteredTransactions(int tabIndex) {
+    if (tabIndex == 1) {
+      // Spendings: spend, loan, repay
+      return _transactions
+          .where(
+            (tx) =>
+                tx['transaction_type'] == 'spend' ||
+                tx['transaction_type'] == 'loan' ||
+                tx['transaction_type'] == 'repay',
+          )
+          .toList();
+    }
+    // All Payments: all
+    return _transactions;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('All Balance Transactions')),
+      appBar: AppBar(
+        title: const Text('All Balance Transactions'),
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: const [Tab(text: 'All Payments'), Tab(text: 'Spendings')],
+        ),
+      ),
       body:
           _isLoading
               ? const Center(child: CircularProgressIndicator())
@@ -84,60 +115,72 @@ class _AllBalanceTransactionsScreenState
               ? Center(child: Text('Error: $_error'))
               : _transactions.isEmpty
               ? const Center(child: Text('No transactions found.'))
-              : RefreshIndicator(
-                onRefresh: _loadTransactions,
-                child: ListView.separated(
-                  itemCount: _transactions.length,
-                  separatorBuilder: (context, i) => const Divider(height: 0),
-                  itemBuilder: (context, i) {
-                    final tx = _transactions[i];
-                    final type = tx['transaction_type'] as String? ?? '';
-                    final amount = (tx['amount'] as num?)?.toDouble() ?? 0.0;
-                    final title = tx['title'] as String? ?? '';
-                    final desc = tx['description'] as String? ?? '';
-                    final date = tx['created_at'] as String?;
-                    return ListTile(
-                      leading: Icon(
-                        _iconForType(type),
-                        color: _colorForType(context, type),
-                      ),
-                      title: Text(
-                        title,
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      subtitle: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '${type[0].toUpperCase()}${type.substring(1)} | ${DateFormatter.formatFullDateTime(date)}',
+              : TabBarView(
+                controller: _tabController,
+                children: List.generate(2, (tabIndex) {
+                  final filtered = _filteredTransactions(tabIndex);
+                  if (filtered.isEmpty) {
+                    return const Center(child: Text('No transactions found.'));
+                  }
+                  return RefreshIndicator(
+                    onRefresh: _loadTransactions,
+                    child: ListView.separated(
+                      itemCount: filtered.length,
+                      separatorBuilder:
+                          (context, i) => const Divider(height: 0),
+                      itemBuilder: (context, i) {
+                        final tx = filtered[i];
+                        final type = tx['transaction_type'] as String? ?? '';
+                        final amount =
+                            (tx['amount'] as num?)?.toDouble() ?? 0.0;
+                        final title = tx['title'] as String? ?? '';
+                        final desc = tx['description'] as String? ?? '';
+                        final date = tx['created_at'] as String?;
+                        return ListTile(
+                          leading: Icon(
+                            _iconForType(type),
+                            color: _colorForType(context, type),
                           ),
-                          if (desc.isNotEmpty)
-                            Text(desc, style: const TextStyle(fontSize: 12)),
-                        ],
-                      ),
-                      trailing: Text(
-                        '''
-                          ${type == 'spend' || type == 'loan' ? '-' : '+'} Rs ${amount.toStringAsFixed(2)}
-                        ''',
-                        style: TextStyle(
-                          color: _colorForType(context, type),
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder:
-                                (context) => BalanceTransactionDetailScreen(
-                                  transaction: tx,
+                          title: Text(
+                            title,
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '${type[0].toUpperCase()}${type.substring(1)} | ${DateFormatter.formatFullDateTime(date)}',
+                              ),
+                              if (desc.isNotEmpty)
+                                Text(
+                                  desc,
+                                  style: const TextStyle(fontSize: 12),
                                 ),
+                            ],
                           ),
+                          trailing: Text(
+                            '${type == 'spend' || type == 'loan' ? '-' : '+'}Rs ${amount.toStringAsFixed(2)}',
+                            style: TextStyle(
+                              color: _colorForType(context, type),
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder:
+                                    (context) => BalanceTransactionDetailScreen(
+                                      transaction: tx,
+                                    ),
+                              ),
+                            );
+                          },
                         );
                       },
-                    );
-                  },
-                ),
+                    ),
+                  );
+                }),
               ),
     );
   }
