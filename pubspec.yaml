@@ -40,6 +40,7 @@ dependencies:
   intl: ^0.20.2
   path_provider: ^2.1.5
   fl_chart: ^0.69.0
+  flutter_svg: ^2.2.0
 
 dev_dependencies:
   flutter_test:
@@ -96,3 +97,4 @@ flutter:
   assets:
     - .env
     - assets/chat_bg.jpg
+    - assets/icons/SPLITSMART.svg

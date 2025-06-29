@@ -15,6 +15,7 @@ import 'verify_email_screen.dart';
 import 'group_management_screen.dart';
 import '../widgets/edit_group_name_dialog.dart';
 import '../widgets/unread_badge.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 class ChatListScreen extends StatefulWidget {
   const ChatListScreen({super.key});
@@ -223,6 +224,11 @@ class _ChatListScreenState extends State<ChatListScreen>
     // Check if user's email is verified
     final isVerified = await _authService.isCurrentUserEmailVerified();
     if (!isVerified && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('You may press on Resend Code to get a new code'),
+        ),
+      );
       // Redirect to email verification screen
       Navigator.pushReplacement(
         context,
@@ -246,7 +252,11 @@ class _ChatListScreenState extends State<ChatListScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('SplitSmart'),
+        title: Padding(
+          padding: EdgeInsets.only(left: 12),
+          child: SvgPicture.asset('assets/icons/SPLITSMART.svg', height: 18),
+        ),
+        centerTitle: false,
         actions: [
           PopupMenuButton<String>(
             onSelected: (value) async {
