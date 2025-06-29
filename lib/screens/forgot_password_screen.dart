@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '../services/auth.dart';
+import '../utils/app_utils.dart';
 import 'reset_password_screen.dart';
+import '../widgets/ui/brand_text_form_field.dart';
+import '../widgets/ui/brand_filled_button.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -14,6 +18,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   final _emailController = TextEditingController();
   final _authService = AuthService();
   bool _isLoading = false;
+  String? _emailError;
 
   @override
   void dispose() {
@@ -21,14 +26,34 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     super.dispose();
   }
 
+  void _clearEmailError() {
+    if (_emailError != null) {
+      setState(() {
+        _emailError = null;
+      });
+    }
+  }
+
   Future<void> _sendOTP() async {
+    // Clear previous errors
+    _clearEmailError();
+
+    // Validate email format
+    final email = _emailController.text.trim();
+    if (!AppUtils.isValidEmail(email)) {
+      setState(() {
+        _emailError = 'Please enter a valid email address';
+      });
+      return;
+    }
+
     if (_formKey.currentState!.validate()) {
       setState(() {
         _isLoading = true;
       });
 
       try {
-        await _authService.sendPasswordResetOTP(_emailController.text.trim());
+        await _authService.sendPasswordResetOTP(email);
 
         if (mounted) {
           // Show success message
@@ -37,7 +62,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               content: const Text(
                 'OTP sent to your email. Please check your inbox.',
               ),
-              backgroundColor: Theme.of(context).colorScheme.primary,
             ),
           );
 
@@ -45,9 +69,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
-              builder:
-                  (context) =>
-                      ResetPasswordScreen(email: _emailController.text.trim()),
+              builder: (context) => ResetPasswordScreen(email: email),
             ),
           );
         }
@@ -60,12 +82,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             errorMessage = 'Too many attempts. Please try again later.';
           }
 
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(errorMessage),
-              backgroundColor: Theme.of(context).colorScheme.error,
-            ),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(errorMessage)));
         }
       } finally {
         if (mounted) {
@@ -85,6 +104,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Forgot Password'),
+        centerTitle: false,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context),
@@ -108,7 +128,14 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const SizedBox(height: 40),
+                    const SizedBox(height: 32),
+                    Center(
+                      child: SvgPicture.asset(
+                        'assets/icons/SPLITSMART.svg',
+                        height: 32,
+                      ),
+                    ),
+                    const SizedBox(height: 54),
                     Icon(
                       Icons.lock_reset,
                       size: 80,
@@ -132,53 +159,29 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 32),
-                    TextFormField(
+                    BrandTextFormField(
                       controller: _emailController,
-                      decoration: InputDecoration(
-                        labelText: 'Email',
-                        hintText: 'Enter your email address',
-                        prefixIcon: Icon(
-                          Icons.email,
-                          color: colorScheme.primary,
-                        ),
-                      ),
+                      labelText: 'Email',
+                      hintText: 'Enter your email address',
+                      prefixIcon: Icons.email,
                       keyboardType: TextInputType.emailAddress,
+                      errorText: _emailError,
+                      onChanged: (value) => _clearEmailError(),
                       validator: (value) {
                         if (value == null || value.isEmpty) {
                           return 'Please enter your email';
                         }
-                        if (!RegExp(
-                          r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
-                        ).hasMatch(value)) {
+                        if (!AppUtils.isValidEmail(value.trim())) {
                           return 'Please enter a valid email address';
                         }
                         return null;
                       },
                     ),
                     const SizedBox(height: 24),
-                    SizedBox(
-                      height: 50,
-                      child: ElevatedButton(
-                        onPressed: _isLoading ? null : _sendOTP,
-                        child:
-                            _isLoading
-                                ? SizedBox(
-                                  height: 20,
-                                  width: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                      colorScheme.onPrimary,
-                                    ),
-                                  ),
-                                )
-                                : Text(
-                                  'Send OTP',
-                                  style: textTheme.titleMedium?.copyWith(
-                                    color: colorScheme.onPrimary,
-                                  ),
-                                ),
-                      ),
+                    BrandFilledButton(
+                      text: 'Send OTP',
+                      onPressed: _isLoading ? null : _sendOTP,
+                      isLoading: _isLoading,
                     ),
                     const SizedBox(height: 16),
                     TextButton(
@@ -188,7 +191,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                         style: TextStyle(color: colorScheme.primary),
                       ),
                     ),
-                    const SizedBox(height: 40),
                   ],
                 ),
               ),
