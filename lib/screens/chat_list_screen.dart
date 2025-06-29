@@ -450,11 +450,7 @@ class _ChatListScreenState extends State<ChatListScreen>
               mainAxisSize: MainAxisSize.min,
               children: [
                 if (unreadCount > 0) ...[
-                  const SizedBox(width: 8),
-                  UnreadBadge(
-                    count: unreadCount,
-                    color: Theme.of(context).colorScheme.errorContainer,
-                  ),
+                  UnreadBadge.warning(count: unreadCount),
                 ],
                 const SizedBox(width: 8),
                 if (lastMessageTime != null)
@@ -550,6 +546,10 @@ class _ChatListScreenState extends State<ChatListScreen>
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
+                if (unreadCount > 0) ...[
+                  UnreadBadge.warning(count: unreadCount),
+                ],
+                const SizedBox(width: 8),
                 if (lastMessage != null)
                   Text(
                     DateFormatter.formatChatListTimestamp(
@@ -562,10 +562,6 @@ class _ChatListScreenState extends State<ChatListScreen>
                       ).colorScheme.onSurface.withValues(alpha: 0.6),
                     ),
                   ),
-                if (unreadCount > 0) ...[
-                  const SizedBox(width: 8),
-                  UnreadBadge(count: unreadCount),
-                ],
               ],
             ),
             onTap: () async {
@@ -647,14 +643,12 @@ class _ChatListScreenState extends State<ChatListScreen>
                                       content: Text(
                                         'Group renamed successfully!',
                                       ),
-                                      backgroundColor: Colors.green,
                                     ),
                                   );
                                 } catch (e) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
                                       content: Text('Error renaming group: $e'),
-                                      backgroundColor: Colors.red,
                                     ),
                                   );
                                 }
@@ -708,14 +702,12 @@ class _ChatListScreenState extends State<ChatListScreen>
                                       content: Text(
                                         'Group deleted successfully!',
                                       ),
-                                      backgroundColor: Colors.green,
                                     ),
                                   );
                                 } catch (e) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
                                       content: Text('Error deleting group: $e'),
-                                      backgroundColor: Colors.red,
                                     ),
                                   );
                                 }
