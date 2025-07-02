@@ -113,87 +113,70 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(16.0),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(
-              minHeight:
-                  MediaQuery.of(context).size.height -
-                  MediaQuery.of(context).padding.top -
-                  kToolbarHeight -
-                  32,
-            ),
-            child: IntrinsicHeight(
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const SizedBox(height: 32),
-                    Center(
-                      child: SvgPicture.asset(
-                        'assets/icons/SPLITSMART.svg',
-                        height: 32,
-                      ),
-                    ),
-                    const SizedBox(height: 54),
-                    Icon(
-                      Icons.lock_reset,
-                      size: 80,
-                      color: colorScheme.primary,
-                    ),
-                    const SizedBox(height: 24),
-                    Text(
-                      'Reset Your Password',
-                      style: textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: colorScheme.onSurface,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Enter your email address and we\'ll send you a one-time password to reset your password.',
-                      style: textTheme.bodyLarge?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 32),
-                    BrandTextFormField(
-                      controller: _emailController,
-                      labelText: 'Email',
-                      hintText: 'Enter your email address',
-                      prefixIcon: Icons.email,
-                      keyboardType: TextInputType.emailAddress,
-                      errorText: _emailError,
-                      onChanged: (value) => _clearEmailError(),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter your email';
-                        }
-                        if (!AppUtils.isValidEmail(value.trim())) {
-                          return 'Please enter a valid email address';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 24),
-                    BrandFilledButton(
-                      text: 'Send OTP',
-                      onPressed: _isLoading ? null : _sendOTP,
-                      isLoading: _isLoading,
-                    ),
-                    const SizedBox(height: 16),
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: Text(
-                        'Back to Login',
-                        style: TextStyle(color: colorScheme.primary),
-                      ),
-                    ),
-                  ],
+          child: Form(
+            key: _formKey,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const SizedBox(height: 48),
+                Center(
+                  child: SvgPicture.asset(
+                    'assets/icons/SPLITSMART.svg',
+                    height: 32,
+                  ),
                 ),
-              ),
+                const SizedBox(height: 54),
+                Text(
+                  'Reset Your Password',
+                  style: textTheme.headlineMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: colorScheme.onSurface,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Enter your email address and we\'ll send you a one-time password to reset your password.',
+                  style: textTheme.bodyLarge?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 32),
+                BrandTextFormField(
+                  controller: _emailController,
+                  labelText: 'Email',
+                  hintText: 'Enter your email address',
+                  prefixIcon: Icons.email,
+                  keyboardType: TextInputType.emailAddress,
+                  errorText: _emailError,
+                  onChanged: (value) => _clearEmailError(),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter your email';
+                    }
+                    if (!AppUtils.isValidEmail(value.trim())) {
+                      return 'Please enter a valid email address';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 24),
+                BrandFilledButton(
+                  text: 'Send OTP',
+                  onPressed: _isLoading ? null : _sendOTP,
+                  isLoading: _isLoading,
+                ),
+                const SizedBox(height: 16),
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text(
+                    'Back to Login',
+                    style: TextStyle(color: colorScheme.primary),
+                  ),
+                ),
+              ],
             ),
           ),
         ),
