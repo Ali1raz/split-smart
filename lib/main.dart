@@ -74,13 +74,13 @@ class _SplashScreenState extends State<SplashScreen>
     ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
 
     // Delay → Zoom → Navigate
-    Future.delayed(const Duration(seconds: 1), () {
+    Future.delayed(const Duration(seconds: 2), () {
       _controller.forward();
     });
 
     _controller.addStatusListener((status) {
       if (status == AnimationStatus.completed) {
-        Future.delayed(const Duration(milliseconds: 600), () {
+        Future.delayed(const Duration(milliseconds: 100), () {
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (_) => const AuthWrapper()),

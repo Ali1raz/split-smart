@@ -46,6 +46,8 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
 
+  flutter_native_splash: ^2.3.10
+
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
   # activated in the `analysis_options.yaml` file located at the root of your
@@ -98,4 +100,16 @@ flutter:
     - .env
     - assets/chat_bg.jpg
     - assets/icons/SPLITSMART.svg
+    - assets/icons/Frame_1.png
     - assets/icons/SPLITSMART_primary.svg
+
+flutter_native_splash:
+  color: "#EC8036"
+  image: assets/icons/Frame_1.png
+
+  android: true
+  ios: true
+
+  android_12:
+    image: assets/icons/Frame_1.png
+    icon_background_color: "#EC8036"
