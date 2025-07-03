@@ -181,6 +181,10 @@ class _AllExpensesScreenState extends State<AllExpensesScreen>
 
     return MainScaffold(
       currentIndex: 3,
+      bottom: TabBar(
+        controller: _tabController,
+        tabs: const [Tab(text: 'All Expenses'), Tab(text: 'My Shares')],
+      ),
       body:
           _isLoading
               ? const Center(child: CircularProgressIndicator())
