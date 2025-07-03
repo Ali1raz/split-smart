@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../services/auth.dart';
 import '../widgets/ui/brand_text_form_field.dart';
 import '../widgets/ui/brand_filled_button.dart';
+import 'home_screen.dart';
 
 class VerifyEmailScreen extends StatefulWidget {
   final String email;
@@ -90,8 +90,10 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
           token: _otpController.text,
         );
         if (mounted) {
-          // Navigate to chat list after successful verification
-          Navigator.pushReplacementNamed(context, '/chat_list');
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (context) => const HomeScreen()),
+            (route) => false,
+          );
         }
       } catch (e) {
         if (mounted) {
