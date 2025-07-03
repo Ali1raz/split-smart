@@ -3,6 +3,7 @@ import '../services/chat_service.dart';
 import '../services/balance_service.dart';
 import '../widgets/expense_details_modal.dart';
 import '../widgets/expense_list_item.dart';
+import 'package:split_smart_supabase/widgets/ui/main_scaffold.dart';
 
 class AllExpensesScreen extends StatefulWidget {
   const AllExpensesScreen({super.key});
@@ -178,14 +179,8 @@ class _AllExpensesScreenState extends State<AllExpensesScreen>
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('All Expenses'),
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: const [Tab(text: 'All Expenses'), Tab(text: 'My Shares')],
-        ),
-      ),
+    return MainScaffold(
+      currentIndex: 3,
       body:
           _isLoading
               ? const Center(child: CircularProgressIndicator())

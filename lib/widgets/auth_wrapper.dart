@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:split_smart_supabase/screens/chat_list_screen.dart';
+import 'package:split_smart_supabase/screens/home_screen.dart';
 import 'package:split_smart_supabase/screens/login_screen.dart';
 import 'package:split_smart_supabase/screens/verify_email_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -22,7 +22,7 @@ class AuthWrapper extends StatelessWidget {
               return VerifyEmailScreen(email: user.email ?? '');
             }
             // Email is verified, show chat list
-            return const ChatListScreen();
+            return const HomeScreen();
           }
         }
         // User is not logged in, show login screen

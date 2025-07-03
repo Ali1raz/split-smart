@@ -7,6 +7,7 @@ import '../utils/date_formatter.dart';
 import 'balance_transaction_detail_screen.dart';
 import '../widgets/save_transaction_button.dart';
 import '../widgets/pie_chart_widget.dart';
+import 'package:split_smart_supabase/widgets/ui/main_scaffold.dart';
 
 class AllBalanceTransactionsScreen extends StatefulWidget {
   const AllBalanceTransactionsScreen({super.key});
@@ -379,14 +380,8 @@ class _AllBalanceTransactionsScreenState
     final theme = Theme.of(context);
     final filterSummary = _getFilterSummary();
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('All Transactions'),
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: const [Tab(text: 'All Payments'), Tab(text: 'Spendings')],
-        ),
-      ),
+    return MainScaffold(
+      currentIndex: 1,
       body: Column(
         children: [
           // Filter indicator

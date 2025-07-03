@@ -4,16 +4,12 @@ import '../services/auth.dart';
 import 'chat_detail_screen.dart';
 import 'create_group_screen.dart';
 import 'group_chat_detail_screen.dart';
-import 'profile_screen.dart';
-import 'stats_screen.dart';
-import 'all_expenses_screen.dart';
-import 'balance_screen.dart';
 import 'dart:async';
 import 'verify_email_screen.dart';
 import '../widgets/chat_list_item.dart';
 import '../widgets/empty_chat_state.dart';
 import '../widgets/group_actions_bottom_sheet.dart';
-import 'package:flutter_svg/flutter_svg.dart';
+import 'package:split_smart_supabase/widgets/ui/main_scaffold.dart';
 
 class ChatListScreen extends StatefulWidget {
   const ChatListScreen({super.key});
@@ -248,133 +244,11 @@ class _ChatListScreenState extends State<ChatListScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Padding(
-          padding: EdgeInsets.only(left: 12),
-          child: SvgPicture.asset('assets/icons/SPLITSMART.svg', height: 18),
-        ),
-        centerTitle: false,
-        actions: [
-          PopupMenuButton<String>(
-            onSelected: (value) async {
-              switch (value) {
-                case 'profile':
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const ProfileScreen(),
-                    ),
-                  );
-                  break;
-                case 'stats':
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const StatsScreen(),
-                    ),
-                  );
-                  break;
-                case 'expenses':
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const AllExpensesScreen(),
-                    ),
-                  );
-                  break;
-                case 'balance':
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const BalanceScreen(),
-                    ),
-                  );
-                  break;
-                case 'logout':
-                  _authService
-                      .logout()
-                      .then((_) {
-                        if (mounted) {
-                          Navigator.of(context).pushReplacementNamed('/login');
-                        }
-                      })
-                      .catchError((e) {
-                        if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Error logging out: $e')),
-                          );
-                        }
-                      });
-                  break;
-              }
-            },
-            itemBuilder:
-                (context) => [
-                  const PopupMenuItem(
-                    value: 'profile',
-                    child: Row(
-                      children: [
-                        Icon(Icons.person),
-                        SizedBox(width: 8),
-                        Text('Profile'),
-                      ],
-                    ),
-                  ),
-                  const PopupMenuItem(
-                    value: 'stats',
-                    child: Row(
-                      children: [
-                        Icon(Icons.analytics),
-                        SizedBox(width: 8),
-                        Text('Stats'),
-                      ],
-                    ),
-                  ),
-                  const PopupMenuItem(
-                    value: 'expenses',
-                    child: Row(
-                      children: [
-                        Icon(Icons.receipt_long),
-                        SizedBox(width: 8),
-                        Text('All Expenses'),
-                      ],
-                    ),
-                  ),
-                  const PopupMenuItem(
-                    value: 'balance',
-                    child: Row(
-                      children: [
-                        Icon(Icons.attach_money),
-                        SizedBox(width: 8),
-                        Text('Balance'),
-                      ],
-                    ),
-                  ),
-                  const PopupMenuItem(
-                    value: 'logout',
-                    child: Row(
-                      children: [
-                        Icon(Icons.logout),
-                        SizedBox(width: 8),
-                        Text('Logout'),
-                      ],
-                    ),
-                  ),
-                ],
-            child: const Padding(
-              padding: EdgeInsets.all(8.0),
-              child: Icon(Icons.more_vert),
-            ),
-          ),
-        ],
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: const [
-            Tab(icon: Icon(Icons.person), text: 'Direct'),
-            Tab(icon: Icon(Icons.group), text: 'Groups'),
-          ],
-        ),
+    return MainScaffold(
+      currentIndex: 2,
+      bottom: TabBar(
+        controller: _tabController,
+        tabs: const [Tab(text: 'Direct'), Tab(text: 'Groups')],
       ),
       body:
           _isLoading

@@ -117,7 +117,7 @@ class AppUtils {
         : Colors.orange;
   }
 
-  // Format currency amount
+  /// Format currency amount
   static String formatCurrency(double amount) {
     return '${AppConstants.currencySymbol}${amount.toStringAsFixed(2)}';
   }
