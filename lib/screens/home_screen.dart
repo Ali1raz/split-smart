@@ -26,6 +26,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   String? _displayName;
   double? _balance;
+  double? _outstandingLoan;
   bool _isLoading = true;
   List<Map<String, dynamic>> _defaultBalanceTitles = [];
   List<Map<String, dynamic>> _recentExpenses = [];
@@ -58,10 +59,12 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       final profile = await _authService.getUserProfile();
       final balance = await _balanceService.getCurrentBalance();
+      final outstandingLoan = await _balanceService.getOutstandingLoan();
       setState(() {
         _displayName =
             (profile?['display_name'] as String?)?.split(' ').first ?? 'User';
         _balance = balance;
+        _outstandingLoan = outstandingLoan;
         _isLoading = false;
       });
     } catch (e) {
@@ -362,7 +365,74 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
+              // Loan Alert Card
+              if ((_outstandingLoan ?? 0) > 0)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Card(
+                    color: Theme.of(context).colorScheme.errorContainer,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(
+                            Icons.warning_amber_rounded,
+                            color:
+                                Theme.of(context).colorScheme.onErrorContainer,
+                            size: 28,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Loan Active',
+                                  style: TextStyle(
+                                    color:
+                                        Theme.of(
+                                          context,
+                                        ).colorScheme.onErrorContainer,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Outstanding Loan: Rs ${_outstandingLoan?.toStringAsFixed(2) ?? '0.00'}',
+                                  style: TextStyle(
+                                    color:
+                                        Theme.of(
+                                          context,
+                                        ).colorScheme.onErrorContainer,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Active loan: Spend wisely, repay steadily.',
+                                  style: TextStyle(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onErrorContainer
+                                        .withValues(alpha: 0.85),
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              const SizedBox(height: 8),
               // Quick Actions Grid
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -428,6 +498,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     ),
                               ),
                     ),
+                    const SizedBox(height: 20),
                   ],
                 ),
               ),
@@ -518,7 +589,7 @@ class _HomeExpenseCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(18),
               boxShadow: [
                 BoxShadow(
-                  color: theme.colorScheme.shadow.withValues(alpha: 0.08),
+                  color: theme.colorScheme.shadow.withValues(alpha: 0.04),
                   blurRadius: 8,
                   offset: const Offset(0, 2),
                 ),
