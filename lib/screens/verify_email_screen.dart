@@ -162,7 +162,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
                   const SizedBox(height: 32),
                   Center(
                     child: SvgPicture.asset(
-                      'assets/icons/SPLITSMART.svg',
+                      'assets/icons/SPLITSMART_primary.svg',
                       height: 32,
                     ),
                   ),
@@ -221,7 +221,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
                     const SizedBox(height: 32),
                     Center(
                       child: SvgPicture.asset(
-                        'assets/icons/SPLITSMART.svg',
+                        'assets/icons/SPLITSMART_primary.svg',
                         height: 32,
                       ),
                     ),
