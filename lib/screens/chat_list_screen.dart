@@ -277,7 +277,10 @@ class _ChatListScreenState extends State<ChatListScreen>
   }
 
   Widget _buildUserList() {
-    if (_users.isEmpty) {
+    // Only show users with a chat history (last_message_content is not null)
+    final usersWithHistory =
+        _users.where((user) => user['last_message_content'] != null).toList();
+    if (usersWithHistory.isEmpty) {
       return RefreshIndicator(
         onRefresh: _loadData,
         child: EmptyChatState.forDirectChats(),
@@ -287,9 +290,9 @@ class _ChatListScreenState extends State<ChatListScreen>
     return RefreshIndicator(
       onRefresh: _loadData,
       child: ListView.builder(
-        itemCount: _users.length,
+        itemCount: usersWithHistory.length,
         itemBuilder: (context, index) {
-          final user = _users[index];
+          final user = usersWithHistory[index];
           final unreadCount = _directUnreadCounts[user['id']] ?? 0;
 
           return ChatListItem(
