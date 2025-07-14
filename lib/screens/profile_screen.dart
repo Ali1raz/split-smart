@@ -5,6 +5,7 @@ import 'stats_screen.dart';
 import 'all_expenses_screen.dart';
 import 'all_balance_transactions_screen.dart';
 import '../widgets/ui/brand_filled_button.dart';
+import '../utils/avatar_utils.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -43,11 +44,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return Scaffold(
+        appBar: AppBar(title: const Text('Profile')),
+        body: const Center(child: CircularProgressIndicator()),
+      );
     }
 
     if (_profile == null) {
-      return const Center(child: Text('Profile not found'));
+      return Scaffold(
+        appBar: AppBar(title: const Text('Profile')),
+        body: const Center(child: Text('Profile not found')),
+      );
     }
 
     return Scaffold(
@@ -82,20 +89,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       padding: const EdgeInsets.all(14),
                       child: Column(
                         children: [
-                          CircleAvatar(
+                          AvatarUtils.buildUserAvatar(
+                            _profile!['id'] ?? '',
+                            _profile!['display_name'] ?? '',
+                            Theme.of(context),
                             radius: 50,
-                            backgroundImage:
-                                _profile!['avatar_url'] != null
-                                    ? NetworkImage(_profile!['avatar_url'])
-                                    : null,
-                            child:
-                                _profile!['avatar_url'] == null
-                                    ? Text(
-                                      _profile!['display_name'][0]
-                                          .toUpperCase(),
-                                      style: const TextStyle(fontSize: 32),
-                                    )
-                                    : null,
+                            fontSize: 32,
+                            avatarUrl: _profile!['avatar_url'],
                           ),
                           const SizedBox(height: 16),
                           Text(

@@ -39,48 +39,96 @@ class MainScaffold extends StatelessWidget {
       ),
       body: body,
       floatingActionButton: floatingActionButton,
-      bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: colorScheme.primary,
-        unselectedItemColor: colorScheme.onSurface.withValues(alpha: 0.7),
-        currentIndex: currentIndex,
-        onTap: (index) {
-          if (index == currentIndex) return;
-          Widget screen;
-          switch (index) {
-            case 0:
-              screen = const HomeScreen();
-              break;
-            case 1:
-              screen = const AllBalanceTransactionsScreen();
-              break;
-            case 2:
-              screen = const ChatListScreen();
-              break;
-            case 3:
-              screen = const AllExpensesScreen();
-              break;
-            default:
-              screen = const HomeScreen();
-          }
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => screen),
-          );
-        },
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.account_balance_wallet),
-            label: 'Transactions',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.chat_bubble_outline),
-            label: 'Chat',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.receipt_long),
-            label: 'Expenses',
+      bottomNavigationBar: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const SizedBox(height: 6), // Padding from above
+          NavigationBar(
+            selectedIndex: currentIndex,
+            onDestinationSelected: (index) {
+              if (index == currentIndex) return;
+              Widget screen;
+              switch (index) {
+                case 0:
+                  screen = const HomeScreen();
+                  break;
+                case 1:
+                  screen = const AllBalanceTransactionsScreen();
+                  break;
+                case 2:
+                  screen = const ChatListScreen();
+                  break;
+                case 3:
+                  screen = const AllExpensesScreen();
+                  break;
+                default:
+                  screen = const HomeScreen();
+              }
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (context) => screen),
+              );
+            },
+            height: 70,
+            backgroundColor: colorScheme.surface,
+            indicatorColor: colorScheme.primary,
+            // Use Theme to override selected icon/label color
+            labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+            destinations: [
+              NavigationDestination(
+                icon: Icon(
+                  Icons.home_outlined,
+                  color:
+                      currentIndex == 0
+                          ? colorScheme.onPrimary
+                          : colorScheme.onSurfaceVariant,
+                ),
+                selectedIcon: Icon(Icons.home, color: colorScheme.onPrimary),
+                label: 'Home',
+              ),
+              NavigationDestination(
+                icon: Icon(
+                  Icons.account_balance_wallet_outlined,
+                  color:
+                      currentIndex == 1
+                          ? colorScheme.onPrimary
+                          : colorScheme.onSurfaceVariant,
+                ),
+                selectedIcon: Icon(
+                  Icons.account_balance_wallet,
+                  color: colorScheme.onPrimary,
+                ),
+                label: 'Transactions',
+              ),
+              NavigationDestination(
+                icon: Icon(
+                  Icons.chat_bubble_outline,
+                  color:
+                      currentIndex == 2
+                          ? colorScheme.onPrimary
+                          : colorScheme.onSurfaceVariant,
+                ),
+                selectedIcon: Icon(
+                  Icons.chat_bubble,
+                  color: colorScheme.onPrimary,
+                ),
+                label: 'Chat',
+              ),
+              NavigationDestination(
+                icon: Icon(
+                  Icons.receipt_long_outlined,
+                  color:
+                      currentIndex == 3
+                          ? colorScheme.onPrimary
+                          : colorScheme.onSurfaceVariant,
+                ),
+                selectedIcon: Icon(
+                  Icons.receipt_long,
+                  color: colorScheme.onPrimary,
+                ),
+                label: 'Expenses',
+              ),
+            ],
           ),
         ],
       ),

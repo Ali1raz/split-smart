@@ -8,6 +8,12 @@ class AppColors {
   static const Color secondary = Color(0xFFCC592D);
   static const Color onPrimary = Color(0xFFFFFFFF); // white text on primary
   static const Color text = Color.fromARGB(255, 22, 22, 22); // black text
+  static const Color greyish = Color.fromARGB(
+    255,
+    242,
+    242,
+    242,
+  ); // custom light grey
 }
 
 ThemeData getAppTheme() {

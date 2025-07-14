@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:split_smart_supabase/screens/stats_screen.dart';
 import 'package:split_smart_supabase/screens/profile_screen.dart';
+import 'package:split_smart_supabase/theme/theme.dart';
 import 'package:split_smart_supabase/widgets/ui/main_scaffold.dart';
 import '../services/auth.dart';
 import '../services/balance_service.dart';
@@ -283,12 +284,11 @@ class _HomeScreenState extends State<HomeScreen> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         _isLoading
-                            ? Container(
-                              width: 90,
-                              height: 28,
-                              decoration: BoxDecoration(
-                                color: colorScheme.surfaceContainerHighest,
-                                borderRadius: BorderRadius.circular(8),
+                            ? Text(
+                              'Loading...',
+                              style: textTheme.titleLarge?.copyWith(
+                                color: colorScheme.onSurface,
+                                fontWeight: FontWeight.w600,
                               ),
                             )
                             : Text(
@@ -434,22 +434,31 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               const SizedBox(height: 8),
               // Quick Actions Grid
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+              Container(
+                // color: colorScheme.primary,
+                decoration: BoxDecoration(
+                  color: AppColors.greyish,
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(42),
+                    topRight: Radius.circular(42),
+                    bottomLeft: Radius.circular(0),
+                    bottomRight: Radius.circular(0),
+                  ),
+                ),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 24,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        Text(
-                          'Recent Expenses',
-                          style: textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
+                    Text(
+                      'Recent Expenses',
+                      style: textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 12),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 12),
                       child:
@@ -463,7 +472,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                       crossAxisCount: 2,
                                       mainAxisSpacing: 12,
                                       crossAxisSpacing: 12,
-                                      childAspectRatio: 1.4,
+                                      childAspectRatio:
+                                          1.2, // slightly taller for more content
                                     ),
                                 itemBuilder:
                                     (context, i) =>
@@ -485,7 +495,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                       crossAxisCount: 2,
                                       mainAxisSpacing: 12,
                                       crossAxisSpacing: 12,
-                                      childAspectRatio: 1.4,
+                                      childAspectRatio:
+                                          1.2, // slightly taller for more content
                                     ),
                                 itemBuilder:
                                     (context, i) => _HomeExpenseCard(
@@ -523,7 +534,7 @@ class _ActionButton extends StatelessWidget {
     return Column(
       children: [
         Material(
-          color: colorScheme.surface,
+          color: AppColors.greyish,
           shape: const CircleBorder(),
           child: InkWell(
             customBorder: const CircleBorder(),
@@ -580,70 +591,76 @@ class _HomeExpenseCard extends StatelessWidget {
     final showBadge = unpaidShare.isNotEmpty;
     return GestureDetector(
       onTap: onTap,
-      child: Stack(
-        children: [
-          Container(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return Container(
+            constraints: const BoxConstraints(minHeight: 110),
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
               color: theme.colorScheme.onPrimary,
-              borderRadius: BorderRadius.circular(18),
-              boxShadow: [
-                BoxShadow(
-                  color: theme.colorScheme.shadow.withValues(alpha: 0.04),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
+              borderRadius: BorderRadius.circular(12),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
+            child: Stack(
               children: [
-                Text(
-                  title,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 15,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  AppUtils.formatCurrency(amount),
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    color: theme.colorScheme.primary,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Flexible(
-                  child: Text(
-                    DateFormatter.formatFullDateTime(createdAt),
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                      fontSize: 11,
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            title,
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 15,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            AppUtils.formatCurrency(amount),
+                            style: theme.textTheme.titleLarge?.copyWith(
+                              color: theme.colorScheme.primary,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 18,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            DateFormatter.formatFullDateTime(createdAt),
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                              fontSize: 11,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                  ],
                 ),
+                if (showBadge)
+                  Positioned(
+                    top: 6,
+                    right: 6,
+                    child: UnreadBadge(
+                      count: 1,
+                      size: 16,
+                      color: theme.colorScheme.error,
+                      showCount: false,
+                    ),
+                  ),
               ],
             ),
-          ),
-          if (showBadge)
-            Positioned(
-              top: 6,
-              right: 6,
-              child: UnreadBadge(
-                count: 1,
-                size: 16,
-                color: theme.colorScheme.error,
-                showCount: false,
-              ),
-            ),
-        ],
+          );
+        },
       ),
     );
   }
