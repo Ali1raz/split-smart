@@ -3,6 +3,7 @@ import '../services/chat_service.dart';
 import '../utils/date_formatter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:async';
+import '../widgets/ui/brand_text_form_field.dart';
 
 class ChatDetailScreen extends StatefulWidget {
   final String otherUserId;
@@ -632,23 +633,17 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                 child: Row(
                   children: [
                     Expanded(
-                      child: TextField(
+                      child: BrandTextFormField(
                         controller: _messageController,
-                        decoration: InputDecoration(
-                          hintText: 'Type a message...',
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(24),
-                            borderSide: BorderSide.none,
-                          ),
-                          filled: true,
-                          fillColor: theme.colorScheme.surfaceVariant,
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 20,
-                            vertical: 10,
-                          ),
-                        ),
+                        hintText: 'Type a message...',
                         maxLines: null,
-                        textCapitalization: TextCapitalization.sentences,
+                        textInputAction: TextInputAction.send,
+                        onSubmitted: (_) => _sendMessage(),
+                        onChanged: (_) => setState(() {}),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 10,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 8),
