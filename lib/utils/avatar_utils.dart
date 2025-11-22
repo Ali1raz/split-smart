@@ -62,8 +62,10 @@ class AvatarUtils {
     String? avatarUrl, // <-- new optional param
   }) {
     final gradient = getUserGradient(userId, theme);
-    final initials = userName.isNotEmpty ? userName[0].toUpperCase() : null;
-    final fallbackUrl = getVercelAvatarUrl(userId, initials: initials);
+    final fallbackUrl = getVercelAvatarUrl(
+      userId,
+      initials: userName[0].toUpperCase(),
+    );
     final useUrl =
         (avatarUrl != null && avatarUrl.isNotEmpty) ? avatarUrl : fallbackUrl;
     final isVercelAvatar = (avatarUrl == null || avatarUrl.isEmpty);
@@ -71,11 +73,7 @@ class AvatarUtils {
     return Container(
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        gradient: LinearGradient(
-          colors: gradient,
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        gradient: LinearGradient(colors: gradient),
       ),
       child: CircleAvatar(
         radius: radius,
@@ -129,50 +127,6 @@ class AvatarUtils {
         ),
       ),
     );
-  }
-
-  // Generic avatar builder that can be used for any entity
-  static Widget buildAvatar(
-    String id,
-    String name,
-    ThemeData theme, {
-    double radius = 20,
-    double fontSize = 16,
-    FontWeight fontWeight = FontWeight.bold,
-    bool isGroup = false,
-  }) {
-    if (isGroup) {
-      return buildGroupAvatar(
-        name,
-        theme,
-        radius: radius,
-        fontSize: fontSize,
-        fontWeight: fontWeight,
-      );
-    } else {
-      return buildUserAvatar(
-        id,
-        name,
-        theme,
-        radius: radius,
-        fontSize: fontSize,
-        fontWeight: fontWeight,
-      );
-    }
-  }
-
-  // Get gradient colors for any entity
-  static List<Color> getGradient(
-    String id,
-    String name,
-    ThemeData theme, {
-    bool isGroup = false,
-  }) {
-    if (isGroup) {
-      return getGroupGradient(name, theme);
-    } else {
-      return getUserGradient(id, theme);
-    }
   }
 
   /// Returns a Vercel avatar URL for the given username or userId.

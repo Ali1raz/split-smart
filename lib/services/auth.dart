@@ -1,7 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../screens/verify_email_screen.dart';
 import '../utils/app_exceptions.dart';
 import 'error_handler_service.dart';
 import 'logger_service.dart';
@@ -117,12 +115,6 @@ class AuthService {
     }
   }
 
-  // Check if user is logged in
-  bool get isLoggedIn => currentUser != null;
-
-  // Check if email is confirmed
-  bool get isEmailConfirmed => currentUser?.emailConfirmedAt != null;
-
   // Check if current user's email is verified (with session refresh)
   Future<bool> isCurrentUserEmailVerified() async {
     try {
@@ -234,41 +226,6 @@ class AuthService {
         e,
         context: 'AuthService.resetPasswordWithOTP',
       );
-    }
-  }
-
-  // Check if user needs email verification and handle redirect
-  Future<bool> checkAndHandleEmailVerification(BuildContext context) async {
-    try {
-      if (currentUser == null) return true; // No user logged in, allow access
-
-      // Check if email is verified
-      final isVerified = await isCurrentUserEmailVerified();
-
-      if (!isVerified) {
-        // Email not verified, redirect to verification screen
-        if (context.mounted) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder:
-                  (context) =>
-                      VerifyEmailScreen(email: currentUser?.email ?? ''),
-            ),
-          );
-        }
-        return false; // Don't allow access
-      }
-
-      return true; // Email verified, allow access
-    } catch (e, st) {
-      _logger.error(
-        'checkAndHandleEmailVerification failed',
-        error: e,
-        stackTrace: st,
-      );
-      // On error, allow access to prevent blocking the user
-      return true;
     }
   }
 }

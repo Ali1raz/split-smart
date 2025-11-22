@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'dart:convert';
+import 'package:SPLITSMART/utils/app_constants.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:SPLITSMART/utils/constants.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../utils/date_formatter.dart';
 

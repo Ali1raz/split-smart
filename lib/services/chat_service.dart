@@ -1,4 +1,4 @@
-import 'package:SPLITSMART/utils/constants.dart';
+import 'package:SPLITSMART/utils/app_constants.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'balance_service.dart';
 

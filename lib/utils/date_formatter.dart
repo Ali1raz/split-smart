@@ -2,6 +2,21 @@ import 'package:flutter/material.dart';
 
 /// A utility class for consistent date and time formatting throughout the app.
 class DateFormatter {
+  static const List<String> months = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
+
   /// Get current timestamp in "yyyyMMddHHmmss" format
   static String getCurrentTimestamp() {
     final currentTime = DateTime.now();
@@ -35,20 +50,6 @@ class DateFormatter {
 
   /// Format date (e.g., "Jan 15")
   static String formatDate(DateTime date) {
-    const months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
-    ];
     return '${months[date.month - 1]} ${date.day}';
   }
 
@@ -182,26 +183,6 @@ class DateFormatter {
     );
   }
 
-  // Debug method to check timezone conversion
-  static String debugTimezoneConversion(String? createdAt) {
-    if (createdAt == null) return 'No timestamp';
-
-    try {
-      final utcTime = DateTime.parse(createdAt);
-      final localTime = utcTime.toLocal();
-      final now = DateTime.now();
-
-      return '''
-UTC: ${utcTime.toIso8601String()}
-Local: ${localTime.toIso8601String()}
-Now: ${now.toIso8601String()}
-Offset: ${localTime.timeZoneOffset}
-''';
-    } catch (e) {
-      return 'Something bad happened';
-    }
-  }
-
   /// Format full date and time (e.g., "Jan 15, 2024 2:30 PM")
   static String formatFullDateTime(dynamic dt) {
     if (dt == null) return '-';
@@ -210,20 +191,7 @@ Offset: ${localTime.timeZoneOffset}
           dt is DateTime
               ? dt.toLocal()
               : DateTime.parse(dt.toString()).toLocal();
-      const months = [
-        'Jan',
-        'Feb',
-        'Mar',
-        'Apr',
-        'May',
-        'Jun',
-        'Jul',
-        'Aug',
-        'Sep',
-        'Oct',
-        'Nov',
-        'Dec',
-      ];
+
       final month = months[date.month - 1];
       final day = date.day;
       final year = date.year;
