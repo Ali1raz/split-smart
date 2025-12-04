@@ -865,7 +865,7 @@ class _GroupChatDetailScreenState extends State<GroupChatDetailScreen>
           if (!isMe) ...[
             AvatarUtils.buildUserAvatar(
               message['sender_id'],
-              message['profiles']?['display_name'],
+              message['profiles']?['display_name'] ?? 'Unknown',
               theme,
               radius: 18,
               fontSize: 14,
@@ -1430,10 +1430,10 @@ class _GroupChatDetailScreenState extends State<GroupChatDetailScreen>
                     leading: AvatarUtils.buildUserAvatar(
                       userId,
                       displayName,
-                      avatarUrl: profile['avatar_url'],
                       theme,
                       radius: 16,
                       fontSize: 12,
+                      avatarUrl: profile['avatar_url'],
                     ),
                     title: Text(displayName),
                     trailing:
