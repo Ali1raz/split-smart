@@ -141,14 +141,14 @@ class _HomeScreenState extends State<HomeScreen> {
                         result['amount_to_balance'] as double;
                     if (amountToBalance > 0) {
                       message =
-                          'Auto-repaid Rs ${amountRepaid.toStringAsFixed(2)} of loan and added Rs ${amountToBalance.toStringAsFixed(2)} to balance';
+                          'Auto-repaid ${AppUtils.formatCurrency(amountRepaid)} of loan and added Rs ${AppUtils.formatCurrency(amountToBalance)} to balance';
                     } else {
                       message =
-                          'Auto-repaid Rs ${amountRepaid.toStringAsFixed(2)} of loan';
+                          'Auto-repaid ${AppUtils.formatCurrency(amountRepaid)} of loan';
                     }
                   } else {
                     message =
-                        'Added Rs ${amount.toStringAsFixed(2)} to balance';
+                        'Added ${AppUtils.formatCurrency(amount)} to balance';
                   }
                   if (mounted) {
                     ScaffoldMessenger.of(
@@ -406,7 +406,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  'Outstanding Loan: Rs ${_outstandingLoan?.toStringAsFixed(2) ?? '0.00'}',
+                                  'Outstanding Loan: ${_outstandingLoan != null ? AppUtils.formatCurrency(_outstandingLoan!) : AppUtils.formatCurrency(0)}',
                                   style: TextStyle(
                                     color:
                                         Theme.of(
@@ -648,7 +648,6 @@ class _HomeExpenseCard extends StatelessWidget {
                           Text(
                             AppUtils.formatCurrency(amount),
                             style: theme.textTheme.titleLarge?.copyWith(
-                              color: theme.colorScheme.primary,
                               fontWeight: FontWeight.bold,
                               fontSize: 18,
                             ),
@@ -672,8 +671,8 @@ class _HomeExpenseCard extends StatelessWidget {
                 ),
                 if (showBadge)
                   Positioned(
-                    top: 6,
-                    right: 6,
+                    top: 0,
+                    right: 0,
                     child: UnreadBadge(
                       count: 1,
                       size: 16,
