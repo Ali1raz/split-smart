@@ -103,6 +103,9 @@ class _LoginScreenState extends State<LoginScreen> {
             );
           }
         } else {
+          if (e.code == 'invalid_credentials') {
+            if (mounted) ErrorDisplay.showErrorSnackBar(context, e.message);
+          }
           if (mounted)
             ErrorDisplay.showErrorSnackBar(context, "Something bad happened");
         }
@@ -206,7 +209,6 @@ class _LoginScreenState extends State<LoginScreen> {
                         return null;
                       },
                     ),
-                    const SizedBox(height: 8),
                     Align(
                       alignment: Alignment.centerRight,
                       child: TextButton(

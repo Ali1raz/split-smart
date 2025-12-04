@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 class AvatarUtils {
   // Generate a unique gradient for each user based on their ID
-  static List<Color> getUserGradient(String userId, ThemeData theme) {
+  static List<Color> getUserGradient(String userId) {
     // Create a hash from the user ID to get consistent colors
     final hash = userId.hashCode;
     final colors = [
@@ -61,7 +61,7 @@ class AvatarUtils {
     FontWeight fontWeight = FontWeight.bold,
     String? avatarUrl, // <-- new optional param
   }) {
-    final gradient = getUserGradient(userId, theme);
+    final gradient = getUserGradient(userId);
     final fallbackUrl = getVercelAvatarUrl(
       userId,
       initials: userName[0].toUpperCase(),

@@ -38,7 +38,7 @@ class UserListItem extends StatelessWidget {
 
     return ListTile(
       contentPadding: EdgeInsets.zero,
-      onTap: onTap ?? () => {print("Tapped on user: $name")},
+      onTap: onTap ?? () => {},
       leading: AvatarUtils.buildUserAvatar(
         userId,
         name,

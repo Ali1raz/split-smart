@@ -76,7 +76,6 @@ class AuthService {
           });
         }
       }
-      print("username: ${email.split('@')[0]}");
       return response;
     } catch (e, st) {
       if (e is AppException) rethrow;
@@ -95,7 +94,6 @@ class AuthService {
         email: email,
         password: password,
       );
-      print(response);
       return response;
     } catch (e, st) {
       if (e is AppException) rethrow;
