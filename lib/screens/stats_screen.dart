@@ -72,10 +72,7 @@ class _StatsScreenState extends State<StatsScreen>
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${AppConstants.loadingError}$e'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text('Error loading'), backgroundColor: Colors.red),
         );
         setState(() {
           _isLoading = false;
@@ -106,10 +103,7 @@ class _StatsScreenState extends State<StatsScreen>
                   children: [
                     CircularProgressIndicator(color: theme.colorScheme.primary),
                     const SizedBox(height: 16),
-                    Text(
-                      AppConstants.loadingMessage,
-                      style: theme.textTheme.bodyLarge,
-                    ),
+                    Text('Loading', style: theme.textTheme.bodyLarge),
                   ],
                 ),
               )
@@ -123,7 +117,7 @@ class _StatsScreenState extends State<StatsScreen>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         ProfileCard(profile: _profile),
-                        const SizedBox(height: AppConstants.defaultSpacing),
+                        const SizedBox(height: 20),
                         ChartBuilders.buildExpenseSharesChart(
                           context,
                           _expenseShares,

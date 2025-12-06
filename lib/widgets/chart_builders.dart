@@ -39,6 +39,39 @@ class ChartBuilders {
     );
   }
 
+  // Transform expense shares for modals
+  static List<Map<String, dynamic>> transformExpenseSharesForModal(
+    List<Map<String, dynamic>> shares,
+  ) {
+    return shares
+        .map(
+          (share) => {
+            'expense_name': share['expenses']?['title'] ?? "Unknown Item",
+            'group_name':
+                share['expenses']?['groups']?['name'] ?? "Unknown Group",
+            'amount_owed': share['amount_owed'],
+            'is_paid': share['is_paid'],
+          },
+        )
+        .toList();
+  }
+
+  // Check if item is active based on last activity date
+  static bool isItemActive(Map<String, dynamic> item, String dateField) {
+    final lastActivity = item[dateField];
+    if (lastActivity == null) return false;
+
+    try {
+      final activityTime = DateTime.parse(lastActivity);
+      final thresholdDate = DateTime.now().subtract(
+        Duration(days: AppConstants.activityThresholdDays),
+      );
+      return activityTime.isAfter(thresholdDate);
+    } catch (e) {
+      return false;
+    }
+  }
+
   // Build group activity pie chart
   static Widget buildGroupActivityChart(
     BuildContext context,
@@ -49,7 +82,7 @@ class ChartBuilders {
         groups.where((group) {
           final lastMessage = group['last_message'];
           if (lastMessage == null) return false;
-          return AppUtils.isItemActive(lastMessage, 'created_at');
+          return isItemActive(lastMessage, 'created_at');
         }).length;
 
     final inactiveGroups =
@@ -58,7 +91,7 @@ class ChartBuilders {
           if (lastMessage == null) {
             return true; // Groups with no messages are inactive
           } else {
-            return !AppUtils.isItemActive(lastMessage, 'created_at');
+            return !isItemActive(lastMessage, 'created_at');
           }
         }).length;
 
@@ -101,7 +134,7 @@ class ChartBuilders {
     final paymentRate =
         totalExpenses > 0 ? (paidExpenses / totalExpenses * 100) : 0.0;
 
-    final allExpenseSharesForModal = AppUtils.transformExpenseSharesForModal(
+    final allExpenseSharesForModal = transformExpenseSharesForModal(
       expenseShares,
     );
     final paidExpenseList =
@@ -129,7 +162,7 @@ class ChartBuilders {
         ),
         StatItem(
           label: 'Payment Rate',
-          value: AppUtils.formatPercentage(paymentRate),
+          value: '${paymentRate.toStringAsFixed(1)}%',
           icon: Icons.trending_up_outlined,
 
           onTap: null,
@@ -173,14 +206,14 @@ class ChartBuilders {
         groups.where((group) {
           final lastMessage = group['last_message'];
           if (lastMessage == null) return false;
-          return AppUtils.isItemActive(lastMessage, 'created_at');
+          return isItemActive(lastMessage, 'created_at');
         }).toList();
 
     final inactiveGroups =
         groups.where((group) {
           final lastMessage = group['last_message'];
           if (lastMessage == null) return true;
-          return !AppUtils.isItemActive(lastMessage, 'created_at');
+          return !isItemActive(lastMessage, 'created_at');
         }).toList();
 
     final totalGroups = groups.length;

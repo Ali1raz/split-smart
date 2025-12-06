@@ -104,7 +104,7 @@ class _ExpensesScreenState extends State<ExpensesScreen>
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Your current balance: Rs ${(currentBalance < 0 ? 0.0 : currentBalance).toStringAsFixed(2)}',
+                      'Your current balance: ${AppUtils.formatCurrency(currentBalance)}',
                     ),
                     const SizedBox(height: 16),
                     const Text(
@@ -287,7 +287,7 @@ class _ExpensesScreenState extends State<ExpensesScreen>
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  'Rs ${totalExpenses.toStringAsFixed(2)}',
+                  '${AppUtils.formatCurrency(totalExpenses)}',
                   style: TextStyle(
                     color: theme.colorScheme.onPrimary,
                     fontSize: 36,
@@ -306,7 +306,7 @@ class _ExpensesScreenState extends State<ExpensesScreen>
                     ),
                     _buildSummaryItem(
                       'Per Person',
-                      'Rs ${perPersonShare.toStringAsFixed(2)}',
+                      '${AppUtils.formatCurrency(perPersonShare)}',
                       Icons.person,
                       theme.colorScheme.onPrimary,
                     ),
@@ -364,7 +364,7 @@ class _ExpensesScreenState extends State<ExpensesScreen>
                     value:
                         isZero
                             ? 'Settled up'
-                            : '${isPositive ? '+' : ''}Rs ${(balance < 0 ? 0.0 : balance).toStringAsFixed(2)}',
+                            : '${isPositive ? '+' : ''} ${AppUtils.formatCurrency(balance)}',
 
                     avatar: AvatarUtils.buildUserAvatar(
                       userId,
@@ -499,7 +499,7 @@ class _ExpensesScreenState extends State<ExpensesScreen>
                 ],
               ),
               trailing: Text(
-                'Rs ${amount.toStringAsFixed(2)}',
+                '${AppUtils.formatCurrency(amount)}',
                 style: theme.textTheme.titleMedium?.copyWith(
                   color: theme.colorScheme.primary,
                   fontWeight: FontWeight.bold,
@@ -611,7 +611,7 @@ class _ExpensesScreenState extends State<ExpensesScreen>
                               ),
                               const SizedBox(width: 6),
                               Text(
-                                '$displayName (Rs ${amount.toStringAsFixed(2)})',
+                                '$displayName (${AppUtils.formatCurrency(amount)})',
                                 style: TextStyle(
                                   fontSize: 12,
                                   color: theme.colorScheme.tertiary,
@@ -688,7 +688,7 @@ class _ExpensesScreenState extends State<ExpensesScreen>
                               ),
                               const SizedBox(width: 6),
                               Text(
-                                '$displayName (Rs ${amount.toStringAsFixed(2)})',
+                                '$displayName (${AppUtils.formatCurrency(amount)})',
                                 style: TextStyle(
                                   fontSize: 12,
                                   color: theme.colorScheme.primary,
@@ -822,7 +822,7 @@ class _ExpensesScreenState extends State<ExpensesScreen>
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      'Rs ${amountOwed.toStringAsFixed(2)}',
+                      '${AppUtils.formatCurrency(amountOwed)}',
                       style: theme.textTheme.titleMedium?.copyWith(
                         color: theme.colorScheme.primary,
                         fontWeight: FontWeight.bold,
@@ -1252,7 +1252,7 @@ class _ExpensesScreenState extends State<ExpensesScreen>
                                     ),
                                   ),
                                   Text(
-                                    'Amount owed: Rs ${amount.toStringAsFixed(2)}',
+                                    'Amount owed: ${AppUtils.formatCurrency(amount)}',
                                     style: theme.textTheme.bodySmall?.copyWith(
                                       color: theme.colorScheme.onSurfaceVariant,
                                     ),

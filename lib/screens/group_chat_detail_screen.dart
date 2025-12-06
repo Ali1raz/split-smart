@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:SPLITSMART/utils/app_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -865,7 +866,7 @@ class _GroupChatDetailScreenState extends State<GroupChatDetailScreen>
           if (!isMe) ...[
             AvatarUtils.buildUserAvatar(
               message['sender_id'],
-              message['profiles']?['display_name'],
+              message['profiles']?['display_name'] ?? 'Unknown',
               theme,
               radius: 18,
               fontSize: 14,
@@ -1080,7 +1081,7 @@ class _GroupChatDetailScreenState extends State<GroupChatDetailScreen>
                                     ),
                                     const SizedBox(width: 4),
                                     Text(
-                                      'Amount: Rs ${(message['payment_data']['amount_paid'] as num?)?.toStringAsFixed(2) ?? '0.00'}',
+                                      'Amount: ${AppUtils.formatCurrency(message['payment_data']['amount_paid'] as double)}',
                                       style: TextStyle(
                                         fontSize: 12,
                                         color: theme.colorScheme.onPrimary,
@@ -1430,10 +1431,10 @@ class _GroupChatDetailScreenState extends State<GroupChatDetailScreen>
                     leading: AvatarUtils.buildUserAvatar(
                       userId,
                       displayName,
-                      avatarUrl: profile['avatar_url'],
                       theme,
                       radius: 16,
                       fontSize: 12,
+                      avatarUrl: profile['avatar_url'],
                     ),
                     title: Text(displayName),
                     trailing:

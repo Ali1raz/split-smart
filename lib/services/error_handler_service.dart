@@ -13,7 +13,6 @@ class ErrorHandlerService {
 
   AppException handleError(dynamic error, {String? context}) {
     _logger.error('Error in ${context ?? 'unknown'}', error: error);
-    print("----------------------------");
 
     // Supabase Postgrest errors
     if (error is supa.PostgrestException) {
@@ -118,9 +117,6 @@ class ErrorHandlerService {
       return error;
     }
 
-    return UnknownException(
-      'An unexpected error occurred.',
-      originalError: error,
-    );
+    return UnknownException('An unexpected error .', originalError: error);
   }
 }

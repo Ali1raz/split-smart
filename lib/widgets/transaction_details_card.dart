@@ -1,5 +1,4 @@
 import 'package:SPLITSMART/utils/app_utils.dart';
-import 'package:SPLITSMART/utils/constants.dart';
 import 'package:flutter/material.dart';
 
 import '../utils/date_formatter.dart';
@@ -30,6 +29,21 @@ class BalanceTransactionDetailCard extends StatelessWidget {
           return Colors.red;
         default:
           return Colors.red;
+      }
+    }
+
+    String getTransactionTypeLabel(String? type) {
+      switch (type) {
+        case 'add':
+          return 'Added';
+        case 'spend':
+          return 'Spent';
+        case 'loan':
+          return 'Loan';
+        case 'repay':
+          return 'Repayment';
+        default:
+          return type ?? '-';
       }
     }
 
@@ -76,7 +90,7 @@ class BalanceTransactionDetailCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  AppConstants.getTransactionTypeLabel(type),
+                  getTransactionTypeLabel(type),
                   style: theme.textTheme.titleMedium?.copyWith(
                     color: _colorForType(context, type),
                     fontWeight: FontWeight.w600,

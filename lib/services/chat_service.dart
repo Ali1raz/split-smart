@@ -1,4 +1,5 @@
-import 'package:SPLITSMART/utils/constants.dart';
+import 'package:SPLITSMART/utils/app_constants.dart';
+import 'package:SPLITSMART/utils/app_utils.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'balance_service.dart';
 
@@ -1033,7 +1034,7 @@ class ChatService {
       await sendGroupMessage(
         groupId: groupId,
         content:
-            '💰 New expense: $title - Rs ${totalAmount.toStringAsFixed(2)}',
+            '💰 New expense: $title - ${AppUtils.formatCurrency(totalAmount)}',
         category: 'expense',
         expenseData: combinedExpenseData,
       );
@@ -1302,7 +1303,7 @@ class ChatService {
       String messageContent;
       // Simplified message - don't show loan information
       messageContent =
-          '✅ ${currentUserProfile['display_name']} paid Rs ${amountOwed.toStringAsFixed(2)} for $expenseTitle';
+          '✅ ${currentUserProfile['display_name']} paid ${AppUtils.formatCurrency(amountOwed)} for $expenseTitle';
 
       // Send a payment message to the group
       await sendGroupMessage(
@@ -1467,54 +1468,6 @@ class ChatService {
     }
   }
 
-  // Debug method to test expense creation
-  Future<Map<String, dynamic>> debugExpenseCreation(String groupId) async {
-    try {
-      // Test if we can access the expenses table
-      final tableTest = await supabase
-          .from('expenses')
-          .select('count')
-          .limit(1);
-
-      // Test if we can access the expense_shares table
-      final sharesTest = await supabase
-          .from('expense_shares')
-          .select('count')
-          .limit(1);
-
-      // Test if we can access the profiles table
-      final profilesTest = await supabase
-          .from('profiles')
-          .select('count')
-          .limit(1);
-
-      // Test if we can access the groups table
-      final groupsTest = await supabase.from('groups').select('count').limit(1);
-
-      // Test if we can access the group_members table
-      final membersTest = await supabase
-          .from('group_members')
-          .select('count')
-          .limit(1);
-
-      return {
-        'success': true,
-        'expenses_table': tableTest.isNotEmpty,
-        'expense_shares_table': sharesTest.isNotEmpty,
-        'profiles_table': profilesTest.isNotEmpty,
-        'groups_table': groupsTest.isNotEmpty,
-        'group_members_table': membersTest.isNotEmpty,
-        'current_user': supabase.auth.currentUser?.id,
-      };
-    } catch (e) {
-      return {
-        'success': false,
-        'error': "Something bad happened",
-        'current_user': supabase.auth.currentUser?.id,
-      };
-    }
-  }
-
   // Get all expenses from all groups the user is a member of
   Future<List<Map<String, dynamic>>> getAllUserExpenses() async {
     try {
@@ -1668,7 +1621,7 @@ class ChatService {
         await sendGroupMessage(
           groupId: groupId,
           content:
-              '✅ $memberName paid Rs ${share['amount_owed'].toStringAsFixed(2)} for ${expense['title']}',
+              '✅ $memberName paid ${AppUtils.formatCurrency(share['amount_owed'])} for ${expense['title']}',
           category: 'payment',
           paymentData: paymentData,
         );
@@ -1697,7 +1650,6 @@ class ChatService {
           .eq('group_id', groupId);
 
       return response.length;
-      return 0;
     } catch (e) {
       // Rethrow the error to be handled by the caller
       rethrow;
@@ -1786,17 +1738,6 @@ class ChatService {
     } catch (e) {
       rethrow;
     }
-  }
-
-  // Legacy methods for backward compatibility
-  Future<void> softDeleteGroupMessage(String messageId) async {
-    // Default to delete for everyone for backward compatibility
-    await deleteGroupMessageForEveryone(messageId);
-  }
-
-  Future<void> softDeleteDirectMessage(String messageId) async {
-    // Default to delete for everyone for backward compatibility
-    await deleteMessageForEveryone(messageId);
   }
 
   // Real-time stream for direct messages that will trigger chat list updates
@@ -1948,7 +1889,6 @@ class ChatService {
               .single();
 
       return DateTime.parse(response['created_at']);
-      return null;
     } catch (e) {
       return null;
     }

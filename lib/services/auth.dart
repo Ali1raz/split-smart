@@ -1,6 +1,4 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:flutter/material.dart';
-import '../screens/verify_email_screen.dart';
 
 import '../utils/app_exceptions.dart';
 import 'error_handler_service.dart';
@@ -78,7 +76,6 @@ class AuthService {
           });
         }
       }
-      print("username: ${email.split('@')[0]}");
       return response;
     } catch (e, st) {
       if (e is AppException) rethrow;
@@ -97,7 +94,6 @@ class AuthService {
         email: email,
         password: password,
       );
-      print(response);
       return response;
     } catch (e, st) {
       if (e is AppException) rethrow;
@@ -116,12 +112,6 @@ class AuthService {
       throw _errorHandler.handleError(e, context: 'AuthService.logout');
     }
   }
-
-  // Check if user is logged in
-  bool get isLoggedIn => currentUser != null;
-
-  // Check if email is confirmed
-  bool get isEmailConfirmed => currentUser?.emailConfirmedAt != null;
 
   // Check if current user's email is verified (with session refresh)
   Future<bool> isCurrentUserEmailVerified() async {
@@ -164,7 +154,7 @@ class AuthService {
   }
 
   // Update user profile
-  Future<void> updateProfile({
+  Future<void> updaterofile({
     String? username,
     String? displayName,
     String? avatarUrl,
@@ -187,43 +177,6 @@ class AuthService {
       if (e is AppException) rethrow;
       _logger.error('updateProfile failed', error: e, stackTrace: st);
       throw _errorHandler.handleError(e, context: 'AuthService.updateProfile');
-    }
-  }
-
-  // Update user email
-  Future<void> updateEmail(String newEmail) async {
-    try {
-      await supabase.auth.updateUser(UserAttributes(email: newEmail));
-    } catch (e, st) {
-      if (e is AppException) rethrow;
-      _logger.error('updateEmail failed', error: e, stackTrace: st);
-      throw _errorHandler.handleError(e, context: 'AuthService.updateEmail');
-    }
-  }
-
-  // Update user password
-  Future<void> updatePassword(String newPassword) async {
-    try {
-      await supabase.auth.updateUser(UserAttributes(password: newPassword));
-    } catch (e, st) {
-      if (e is AppException) rethrow;
-      _logger.error('updatePassword failed', error: e, stackTrace: st);
-      throw _errorHandler.handleError(e, context: 'AuthService.updatePassword');
-    }
-  }
-
-  // Get email confirmation status
-  Future<bool> checkEmailConfirmation() async {
-    try {
-      final user = supabase.auth.currentUser;
-      if (user == null) return false;
-
-      // Refresh the user data
-      await supabase.auth.refreshSession();
-      return supabase.auth.currentUser?.emailConfirmedAt != null;
-    } catch (e, st) {
-      _logger.error('checkEmailConfirmation failed', error: e, stackTrace: st);
-      return false;
     }
   }
 
@@ -271,41 +224,6 @@ class AuthService {
         e,
         context: 'AuthService.resetPasswordWithOTP',
       );
-    }
-  }
-
-  // Check if user needs email verification and handle redirect
-  Future<bool> checkAndHandleEmailVerification(BuildContext context) async {
-    try {
-      if (currentUser == null) return true; // No user logged in, allow access
-
-      // Check if email is verified
-      final isVerified = await isCurrentUserEmailVerified();
-
-      if (!isVerified) {
-        // Email not verified, redirect to verification screen
-        if (context.mounted) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder:
-                  (context) =>
-                      VerifyEmailScreen(email: currentUser?.email ?? ''),
-            ),
-          );
-        }
-        return false; // Don't allow access
-      }
-
-      return true; // Email verified, allow access
-    } catch (e, st) {
-      _logger.error(
-        'checkAndHandleEmailVerification failed',
-        error: e,
-        stackTrace: st,
-      );
-      // On error, allow access to prevent blocking the user
-      return true;
     }
   }
 }
