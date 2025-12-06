@@ -109,9 +109,14 @@ class UserSearchDelegate extends SearchDelegate<String?> {
           itemCount: users.length,
           itemBuilder: (context, index) {
             final user = users[index];
+            final isCurrentUser = user['id'] == currentUserId;
+            final displayName =
+                user['display_name'] ?? user['username'] ?? 'Unknown';
+            final nameWithYouIndicator =
+                isCurrentUser ? '$displayName (You)' : displayName;
             return UserListItem(
               userId: user['id'],
-              name: user['display_name'] ?? user['username'] ?? 'Unknown',
+              name: nameWithYouIndicator,
               subtitle: user['email'] ?? user['username'],
               avatarUrl: user['avatar_url'],
               onTap: () {

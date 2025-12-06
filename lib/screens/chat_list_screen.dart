@@ -293,7 +293,7 @@ class _ChatListScreenState extends State<ChatListScreen>
   }
 
   Widget _buildUserList() {
-    // Only show users with a chat history (last_message_content is not null)
+    // Show users with chat history, including current user with placeholder
     final usersWithHistory =
         _users.where((user) => user['last_message_content'] != null).toList();
     if (usersWithHistory.isEmpty) {
@@ -310,12 +310,24 @@ class _ChatListScreenState extends State<ChatListScreen>
         itemBuilder: (context, index) {
           final user = usersWithHistory[index];
           final unreadCount = _directUnreadCounts[user['id']] ?? 0;
+          final isCurrentUser = user['id'] == _authService.currentUser?.id;
+          final displayName = user['display_name'] ?? 'Unknown User';
+          final nameWithYouIndicator =
+              isCurrentUser ? '$displayName (You)' : displayName;
+
+          // For current user messaging themselves, handle the display properly
+          String? lastMessageSenderName =
+              user['last_message_sender_display_name'];
+          if (isCurrentUser && user['last_message_sender_id'] != null) {
+            // If it's the current user and there's a sender, show "You"
+            lastMessageSenderName = 'You';
+          }
 
           return ChatListItem(
             id: user['id'],
-            name: user['display_name'] ?? 'Unknown User',
+            name: nameWithYouIndicator,
             lastMessage: user['last_message_content'],
-            lastMessageSenderName: user['last_message_sender_display_name'],
+            lastMessageSenderName: lastMessageSenderName,
             lastMessageSenderId: user['last_message_sender_id'],
             lastMessageTime: user['last_message_created_at'],
             unreadCount: unreadCount,
