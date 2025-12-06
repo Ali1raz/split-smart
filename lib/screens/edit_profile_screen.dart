@@ -84,7 +84,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     try {
       final profile = await _authService.getUserProfile();
 
-      print(_supabase.auth.currentUser);
       if (profile != null) {
         setState(() {
           _profile = profile;

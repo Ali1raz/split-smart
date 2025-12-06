@@ -1,7 +1,7 @@
+import 'package:SPLITSMART/utils/app_constants.dart';
 import 'package:flutter/material.dart';
 
 import '../services/chat_service.dart';
-import '../utils/constants.dart';
 import '../widgets/ui/brand_filled_button.dart';
 import '../widgets/ui/brand_text_form_field.dart';
 import '../widgets/user_list_item.dart';
@@ -266,7 +266,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
-                              '${_selectedUserIds.length}/${AppConstants.maxMembersAllowed}',
+                              '${_selectedUserIds.length}/${AppConstants.maxMembersAllowed} selected',
                               style: textTheme.bodySmall?.copyWith(
                                 color: theme.colorScheme.onPrimaryContainer,
                                 fontWeight: FontWeight.bold,

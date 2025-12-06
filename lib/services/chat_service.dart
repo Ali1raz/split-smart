@@ -1,4 +1,5 @@
-import 'package:SPLITSMART/utils/constants.dart';
+import 'package:SPLITSMART/utils/app_constants.dart';
+import 'package:SPLITSMART/utils/app_utils.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'balance_service.dart';
 
@@ -1033,7 +1034,7 @@ class ChatService {
       await sendGroupMessage(
         groupId: groupId,
         content:
-            '💰 New expense: $title - Rs ${totalAmount.toStringAsFixed(2)}',
+            '💰 New expense: $title - ${AppUtils.formatCurrency(totalAmount)}',
         category: 'expense',
         expenseData: combinedExpenseData,
       );
@@ -1302,7 +1303,7 @@ class ChatService {
       String messageContent;
       // Simplified message - don't show loan information
       messageContent =
-          '✅ ${currentUserProfile['display_name']} paid Rs ${amountOwed.toStringAsFixed(2)} for $expenseTitle';
+          '✅ ${currentUserProfile['display_name']} paid ${AppUtils.formatCurrency(amountOwed)} for $expenseTitle';
 
       // Send a payment message to the group
       await sendGroupMessage(
@@ -1620,7 +1621,7 @@ class ChatService {
         await sendGroupMessage(
           groupId: groupId,
           content:
-              '✅ $memberName paid Rs ${share['amount_owed'].toStringAsFixed(2)} for ${expense['title']}',
+              '✅ $memberName paid ${AppUtils.formatCurrency(share['amount_owed'])} for ${expense['title']}',
           category: 'payment',
           paymentData: paymentData,
         );

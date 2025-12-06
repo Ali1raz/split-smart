@@ -182,40 +182,6 @@ class BalanceService {
     }
   }
 
-  // Repay loan from balance
-  Future<void> repayLoan({
-    required double amount,
-    required String title,
-    String? description,
-  }) async {
-    try {
-      // Get current balance to check outstanding loan
-      final currentBalance = await getUserBalance();
-      final totalLoans =
-          (currentBalance?['total_loans'] as num?)?.toDouble() ?? 0.0;
-      final totalRepaid =
-          (currentBalance?['total_repaid'] as num?)?.toDouble() ?? 0.0;
-      final outstandingLoan = totalLoans - totalRepaid;
-
-      // Validate that we're not repaying more than outstanding
-      if (amount > outstandingLoan) {
-        throw Exception(
-          'Cannot repay more than the outstanding loan amount (Rs ${outstandingLoan.toStringAsFixed(2)})',
-        );
-      }
-
-      await supabase.from('balance_transactions').insert({
-        'user_id': supabase.auth.currentUser!.id,
-        'transaction_type': 'repay',
-        'amount': amount,
-        'title': title,
-        'description': description,
-      });
-    } catch (e) {
-      rethrow;
-    }
-  }
-
   // Get user's transaction history
   Future<List<Map<String, dynamic>>> getTransactionHistory({
     String? transactionType,
@@ -319,42 +285,6 @@ class BalanceService {
     }
   }
 
-  // Get transactions for a specific expense share
-  Future<List<Map<String, dynamic>>> getTransactionsForExpenseShare(
-    String expenseShareId,
-  ) async {
-    try {
-      final transactions = await supabase
-          .from('balance_transactions')
-          .select('*')
-          .eq('user_id', supabase.auth.currentUser!.id)
-          .eq('expense_share_id', expenseShareId)
-          .order('created_at', ascending: false);
-
-      return List<Map<String, dynamic>>.from(transactions);
-    } catch (e) {
-      rethrow;
-    }
-  }
-
-  // Get transactions for a specific group
-  Future<List<Map<String, dynamic>>> getTransactionsForGroup(
-    String groupId,
-  ) async {
-    try {
-      final transactions = await supabase
-          .from('balance_transactions')
-          .select('*')
-          .eq('user_id', supabase.auth.currentUser!.id)
-          .eq('group_id', groupId)
-          .order('created_at', ascending: false);
-
-      return List<Map<String, dynamic>>.from(transactions);
-    } catch (e) {
-      rethrow;
-    }
-  }
-
   // Check if user has sufficient balance for a payment
   Future<bool> hasSufficientBalance(double amount) async {
     try {
@@ -387,21 +317,5 @@ class BalanceService {
     } catch (e) {
       return 0.0;
     }
-  }
-
-  // Get detailed transaction history with expense, group, and share info
-  Future<List<Map<String, dynamic>>> getDetailedTransactionHistory({
-    int limit = 100,
-    int offset = 0,
-  }) async {
-    final response = await supabase
-        .from('balance_transactions')
-        .select('*, expense_shares(*, expenses(title, group_id), groups(name))')
-        .eq('user_id', supabase.auth.currentUser!.id)
-        .order('created_at', ascending: false)
-        .limit(limit)
-        .range(offset, offset + limit - 1);
-
-    return List<Map<String, dynamic>>.from(response);
   }
 }
