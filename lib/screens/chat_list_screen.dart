@@ -11,6 +11,7 @@ import '../widgets/group_actions_bottom_sheet.dart';
 import 'chat_detail_screen.dart';
 import 'create_group_screen.dart';
 import 'group_chat_detail_screen.dart';
+import 'user_search_delegate.dart';
 import 'verify_email_screen.dart';
 
 class ChatListScreen extends StatefulWidget {
@@ -248,6 +249,19 @@ class _ChatListScreenState extends State<ChatListScreen>
   Widget build(BuildContext context) {
     return MainScaffold(
       currentIndex: 2,
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.search),
+          onPressed: () {
+            showSearch(
+              context: context,
+              delegate: UserSearchDelegate(
+                currentUserId: _authService.currentUser?.id,
+              ),
+            );
+          },
+        ),
+      ],
       bottom: TabBar(
         controller: _tabController,
         tabs: const [Tab(text: 'Direct'), Tab(text: 'Groups')],

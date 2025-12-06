@@ -47,6 +47,8 @@ permission_handler: ^12.0.0+1
 - use avatar_utils.dart for avatar related utils like building user/group avatar widget with gradient fallback for example `buildUserAvatar(userId, userName, theme, {radius = 20, fontSize = 16, fontWeight = FontWeight.bold ,avatarUrl?})` or `buildGroupAvatar()`.
 - use lib/utils/date_formatter.dart for formating dates and times in different formats. [see file for full list]
 
+- dont use withOpacity(), instead use withValues(alpha: xx) for better performance.
+
 - see lib/theme/theme.dart for app color scheme.
 
 ### `/lib/screens/` - UI Screens

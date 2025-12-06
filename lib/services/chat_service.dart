@@ -1,6 +1,7 @@
 import 'package:SPLITSMART/utils/app_constants.dart';
 import 'package:SPLITSMART/utils/app_utils.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'balance_service.dart';
 
 class ChatService {
@@ -17,6 +18,34 @@ class ChatService {
       return List<Map<String, dynamic>>.from(response);
     } catch (e) {
       rethrow;
+    }
+  }
+
+  // Search users by username or email
+  Future<List<Map<String, dynamic>>> searchUsers(String query) async {
+    try {
+      // Try to search in the view first to get emails
+      // Note: This requires the view 'user_profiles_with_emails' to be accessible
+      final response = await supabase
+          .from('user_profiles_with_emails')
+          .select()
+          .or('username.ilike.%$query%,email.ilike.%$query%')
+          .neq('id', supabase.auth.currentUser!.id)
+          .limit(20);
+      return List<Map<String, dynamic>>.from(response);
+    } catch (e) {
+      // Fallback to searching profiles (no email search) if view is not accessible
+      try {
+        final response = await supabase
+            .from('profiles')
+            .select()
+            .ilike('username', '%$query%')
+            .neq('id', supabase.auth.currentUser!.id)
+            .limit(20);
+        return List<Map<String, dynamic>>.from(response);
+      } catch (e2) {
+        rethrow;
+      }
     }
   }
 
