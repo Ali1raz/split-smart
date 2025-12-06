@@ -55,30 +55,41 @@ class ChatListItem extends StatelessWidget {
 
     final Widget subtitleWidget =
         lastMessage != null
-            ? RichText(
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              text: TextSpan(
-                children: [
-                  TextSpan(
-                    text:
-                        '${lastMessageSenderId != null && lastMessageSenderId == effectiveCurrentUserId ? 'You' : (lastMessageSenderName ?? 'Unknown')}: ',
-                    style: TextStyle(
-                      color: theme.colorScheme.tertiary,
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                    ),
+            ? (lastMessageSenderId == null
+                ? Text(
+                  lastMessage!,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                    fontSize: 14,
+                    fontStyle: FontStyle.italic,
                   ),
-                  TextSpan(
-                    text: lastMessage!,
-                    style: TextStyle(
-                      color: theme.colorScheme.onSurface,
-                      fontSize: 14,
-                    ),
+                )
+                : RichText(
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  text: TextSpan(
+                    children: [
+                      TextSpan(
+                        text:
+                            '${lastMessageSenderId != null && lastMessageSenderId == effectiveCurrentUserId ? 'You' : (lastMessageSenderName ?? 'Unknown')}: ',
+                        style: TextStyle(
+                          color: theme.colorScheme.tertiary,
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      TextSpan(
+                        text: lastMessage!,
+                        style: TextStyle(
+                          color: theme.colorScheme.onSurface,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            )
+                ))
             : Text(
               'No messages yet',
               maxLines: 1,

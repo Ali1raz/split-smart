@@ -11,6 +11,7 @@ import '../widgets/group_actions_bottom_sheet.dart';
 import 'chat_detail_screen.dart';
 import 'create_group_screen.dart';
 import 'group_chat_detail_screen.dart';
+import 'user_search_delegate.dart';
 import 'verify_email_screen.dart';
 
 class ChatListScreen extends StatefulWidget {
@@ -248,6 +249,19 @@ class _ChatListScreenState extends State<ChatListScreen>
   Widget build(BuildContext context) {
     return MainScaffold(
       currentIndex: 2,
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.search),
+          onPressed: () {
+            showSearch(
+              context: context,
+              delegate: UserSearchDelegate(
+                currentUserId: _authService.currentUser?.id,
+              ),
+            );
+          },
+        ),
+      ],
       bottom: TabBar(
         controller: _tabController,
         tabs: const [Tab(text: 'Direct'), Tab(text: 'Groups')],
@@ -279,7 +293,7 @@ class _ChatListScreenState extends State<ChatListScreen>
   }
 
   Widget _buildUserList() {
-    // Only show users with a chat history (last_message_content is not null)
+    // Show users with chat history, including current user with placeholder
     final usersWithHistory =
         _users.where((user) => user['last_message_content'] != null).toList();
     if (usersWithHistory.isEmpty) {
@@ -296,12 +310,24 @@ class _ChatListScreenState extends State<ChatListScreen>
         itemBuilder: (context, index) {
           final user = usersWithHistory[index];
           final unreadCount = _directUnreadCounts[user['id']] ?? 0;
+          final isCurrentUser = user['id'] == _authService.currentUser?.id;
+          final displayName = user['display_name'] ?? 'Unknown User';
+          final nameWithYouIndicator =
+              isCurrentUser ? '$displayName (You)' : displayName;
+
+          // For current user messaging themselves, handle the display properly
+          String? lastMessageSenderName =
+              user['last_message_sender_display_name'];
+          if (isCurrentUser && user['last_message_sender_id'] != null) {
+            // If it's the current user and there's a sender, show "You"
+            lastMessageSenderName = 'You';
+          }
 
           return ChatListItem(
             id: user['id'],
-            name: user['display_name'] ?? 'Unknown User',
+            name: nameWithYouIndicator,
             lastMessage: user['last_message_content'],
-            lastMessageSenderName: user['last_message_sender_display_name'],
+            lastMessageSenderName: lastMessageSenderName,
             lastMessageSenderId: user['last_message_sender_id'],
             lastMessageTime: user['last_message_created_at'],
             unreadCount: unreadCount,

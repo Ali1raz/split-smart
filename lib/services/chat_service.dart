@@ -1,6 +1,7 @@
 import 'package:SPLITSMART/utils/app_constants.dart';
 import 'package:SPLITSMART/utils/app_utils.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'balance_service.dart';
 
 class ChatService {
@@ -20,14 +21,71 @@ class ChatService {
     }
   }
 
+  // Search users by username or email
+  Future<List<Map<String, dynamic>>> searchUsers(String query) async {
+    try {
+      // Try to search in the view first to get emails
+      // Note: This requires the view 'user_profiles_with_emails' to be accessible
+      final response = await supabase
+          .from('user_profiles_with_emails')
+          .select()
+          .or('username.ilike.%$query%,email.ilike.%$query%')
+          .limit(20);
+      return List<Map<String, dynamic>>.from(response);
+    } catch (e) {
+      // Fallback to searching profiles (no email search) if view is not accessible
+      try {
+        final response = await supabase
+            .from('profiles')
+            .select()
+            .ilike('username', '%$query%')
+            .limit(20);
+        return List<Map<String, dynamic>>.from(response);
+      } catch (e2) {
+        rethrow;
+      }
+    }
+  }
+
   // Get all users with their last message
   Future<List<Map<String, dynamic>>> getUsersWithLastMessage() async {
     try {
+      final currentUserId = supabase.auth.currentUser!.id;
+
+      // Get all users with chat history
       final response = await supabase.rpc(
         'get_user_chats_with_last_message',
-        params: {'current_user_id': supabase.auth.currentUser!.id},
+        params: {'current_user_id': currentUserId},
       );
-      return List<Map<String, dynamic>>.from(response);
+      final users = List<Map<String, dynamic>>.from(response);
+
+      // Get current user's profile
+      final currentUserProfile =
+          await supabase
+              .from('profiles')
+              .select()
+              .eq('id', currentUserId)
+              .single();
+
+      // Check if current user already has chat history with themselves
+      final hasSelfChat = users.any((user) => user['id'] == currentUserId);
+
+      // If no self-chat exists, add current user with placeholder message
+      if (!hasSelfChat) {
+        users.insert(0, {
+          'id': currentUserId,
+          'username': currentUserProfile['username'],
+          'display_name': currentUserProfile['display_name'],
+          'avatar_url': currentUserProfile['avatar_url'],
+          'last_message_content': 'Message yourself',
+          'last_message_sender_id': null,
+          'last_message_sender_display_name': null,
+          'last_message_created_at': null,
+          'is_placeholder': true, // Flag to indicate this is a placeholder
+        });
+      }
+
+      return users;
     } catch (e) {
       rethrow;
     }
