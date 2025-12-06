@@ -32,7 +32,22 @@ permission_handler: ^12.0.0+1
 ### supabase/table_schema
 
 - see \*.sql files defining database schema and RLS policies, these are already applied in Supabase dashboard and are named accordingly to table names.
-- to update schema create new migration files in `supabase/migrations/{what_you_did}.sql`, then ask to go to supabase dashboard to run migration.
+- see ./table-schemas.md for detailed schema explanation. when you update a table schema, also update that file.
+- to update schema, don't edit existing files, instead create new migration files in `supabase/migrations/{what_you_did}.sql`, then ask me to go to supabase dashboard to run migration.
+
+- use lib/utils/app_utils.dart for util functions that can be used in multiple files or other projects for example:
+- use formatCurrency(double amount) from lib/utils/app_utils.dart to format currency.
+- use formatDateTime(DateTime dateTime) for formating datetime
+- for notmalizing username of users use normalizeUsername(String input) like "John Doe" -> "john_doe" or "User-Name!" -> "user_name"
+- to check isValidEmail(String email)
+
+- use lib/utils/app_constants.dart for app-wise constants like cardBorderRadius, tagBorderRadius, itemIconSize, currencySymbol,
+  documentsPath etc. [see file for full list]
+
+- use avatar_utils.dart for avatar related utils like building user/group avatar widget with gradient fallback for example `buildUserAvatar(userId, userName, theme, {radius = 20, fontSize = 16, fontWeight = FontWeight.bold ,avatarUrl?})` or `buildGroupAvatar()`.
+- use lib/utils/date_formatter.dart for formating dates and times in different formats. [see file for full list]
+
+- see lib/theme/theme.dart for app color scheme.
 
 ### `/lib/screens/` - UI Screens
 
@@ -328,7 +343,8 @@ Project-specific conventions
 
 ```dart
 // Services are stateless and use Supabase client
-final supabase = Supabase.instance.client;
+final supabase = SupabaseManager.client; // imported from lib/utils/supabase.dart
+
 
 // Always handle errors with try-catch
 Future<void> someMethod() async {
@@ -600,7 +616,7 @@ try {
 
 ### Constraints
 
-- Maximum group members: Defined in `AppConstants.maxMembersAllowed`
+- Maximum group members: Defined in `maxMembersAllowed`
 - Email must be verified before accessing the app
 - Group admin cannot remove themselves
 - Cannot repay more than outstanding loan amount
